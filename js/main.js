@@ -32,6 +32,18 @@ if(car){
   document.addEventListener('visibilitychange',()=>{paused=document.hidden;play()});
   play();
 }
+// Product galleries: thumbnail buttons swap the main image
+document.querySelectorAll('.gal').forEach(g=>{
+  const box=g.querySelector('.gal-main'),main=box.querySelector('img'),btns=g.querySelectorAll('.thumbs button');
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    if(b.getAttribute('aria-pressed')==='true')return;
+    btns.forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+    main.classList.add('swap');
+    const next=new Image();next.src=b.dataset.src;
+    const show=()=>{main.src=b.dataset.src;main.alt=b.dataset.alt;box.classList.toggle('photo',b.dataset.type==='photo');requestAnimationFrame(()=>main.classList.remove('swap'))};
+    (next.decode?next.decode():Promise.resolve()).then(show,show);
+  }));
+});
 // Contact form: posts to Formspree (set your ID in contact.html)
 const form=document.getElementById('contact-form');
 if(form)form.addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('note');
