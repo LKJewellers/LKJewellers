@@ -32,17 +32,28 @@ if(car){
   document.addEventListener('visibilitychange',()=>{paused=document.hidden;play()});
   play();
 }
-// Product galleries: thumbnail buttons swap the main image
+// Product galleries: photos change automatically with a crossfade; thumbnails jump to a photo
 document.querySelectorAll('.gal').forEach(g=>{
-  const box=g.querySelector('.gal-main'),main=box.querySelector('img'),btns=g.querySelectorAll('.thumbs button');
-  btns.forEach(b=>b.addEventListener('click',()=>{
-    if(b.getAttribute('aria-pressed')==='true')return;
+  const btns=[...g.querySelectorAll('.thumbs button')];if(btns.length<2)return;
+  const main=g.querySelector('.gal-main img'),still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i=0,busy=false,timer=null,hover=false,seen=false;
+  function show(n){
+    if(busy||n===i)return;busy=true;const b=btns[n];
     btns.forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
-    main.classList.add('swap');
-    const next=new Image();next.src=b.dataset.src;
-    const show=()=>{main.src=b.dataset.src;main.alt=b.dataset.alt;box.classList.toggle('photo',b.dataset.type==='photo');requestAnimationFrame(()=>main.classList.remove('swap'))};
-    (next.decode?next.decode():Promise.resolve()).then(show,show);
-  }));
+    const top=main.cloneNode();top.removeAttribute('fetchpriority');top.removeAttribute('loading');
+    top.src=b.dataset.src;top.alt=b.dataset.alt;top.classList.toggle('cover',b.dataset.type==='photo');top.classList.add('xf');
+    const go=()=>{main.parentNode.appendChild(top);requestAnimationFrame(()=>requestAnimationFrame(()=>top.classList.add('in')));
+      setTimeout(()=>{main.src=b.dataset.src;main.alt=b.dataset.alt;main.classList.toggle('cover',b.dataset.type==='photo');
+        (main.decode?main.decode():Promise.resolve()).catch(()=>{}).then(()=>{top.remove();i=n;busy=false})},1400)};
+    (top.decode?top.decode():Promise.resolve()).then(go,go);
+  }
+  function play(){clearInterval(timer);if(!still&&seen&&!hover)timer=setInterval(()=>show((i+1)%btns.length),4200)}
+  btns.forEach((b,n)=>b.addEventListener('click',()=>{show(n);play()}));
+  g.addEventListener('mouseenter',()=>{hover=true;play()});g.addEventListener('mouseleave',()=>{hover=false;play()});
+  g.addEventListener('focusin',()=>{hover=true;play()});g.addEventListener('focusout',()=>{hover=false;play()});
+  // Only run while on screen, and start each gallery at a slightly different moment so they don't all change together
+  if('IntersectionObserver' in window)new IntersectionObserver(es=>es.forEach(e=>{seen=e.isIntersecting;play()}),{threshold:.3}).observe(g);else seen=true;
+  setTimeout(play,Math.random()*2200);
 });
 // Contact form: posts to Formspree (set your ID in contact.html)
 const form=document.getElementById('contact-form');
