@@ -7,7 +7,7 @@
 
 **Palette:** pearl background `#fbf8f5`, blush `#f6ebe6`, sage `#e9eee7`, champagne gold `#c2a167` / `#8a6a36`, charcoal text `#2b2622`.
 
-**Images:** `images/<product>-1.webp`, `-2`, `-3`… are each product's gallery (1000×1000, transparent backgrounds, `-1` is the main image). `images/thumbs/` holds 200px versions used for the thumbnail buttons. All were prepared from the supplied renders: backgrounds removed, soft shadows kept, trimmed and centred at a consistent size, never stretched. One lifestyle photo (`infinity-cross-4`) is kept as a photo.
+**Images:** `images/<product>-1.webp`, `-2`, `-3`… are each product's gallery (1000×1000, transparent backgrounds, `-1` is the main image). `thumbs/` (at the root, next to `images/`) holds 200px versions used for the thumbnail buttons. All were prepared from the supplied renders: backgrounds removed, soft shadows kept, trimmed and centred at a consistent size, never stretched. One lifestyle photo (`infinity-cross-4`) is kept as a photo.
 
 **Galleries:** on cards and product pages, each thumbnail is a `<button data-src="images/…webp">`. Clicking it swaps the main image. To add a view, add an image file and another button in the same format.
 
