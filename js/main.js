@@ -32,29 +32,18 @@ if(car){
   document.addEventListener('visibilitychange',()=>{paused=document.hidden;play()});
   play();
 }
-// Product galleries: photos change automatically with a crossfade; thumbnails jump to a photo
-document.querySelectorAll('.gal').forEach(g=>{
-  const btns=[...g.querySelectorAll('.thumbs button')];if(btns.length<2)return;
-  const main=g.querySelector('.gal-main img'),still=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let i=0,busy=false,timer=null,hover=false,seen=false;
-  function show(n){
-    if(busy||n===i)return;busy=true;const b=btns[n];
-    btns.forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
-    const top=main.cloneNode();top.removeAttribute('fetchpriority');top.removeAttribute('loading');
-    top.src=b.dataset.src;top.alt=b.dataset.alt;top.classList.toggle('cover',b.dataset.type==='photo');top.classList.add('xf');
-    const go=()=>{main.parentNode.appendChild(top);requestAnimationFrame(()=>requestAnimationFrame(()=>top.classList.add('in')));
-      setTimeout(()=>{main.src=b.dataset.src;main.alt=b.dataset.alt;main.classList.toggle('cover',b.dataset.type==='photo');
-        (main.decode?main.decode():Promise.resolve()).catch(()=>{}).then(()=>{top.remove();i=n;busy=false})},1400)};
-    (top.decode?top.decode():Promise.resolve()).then(go,go);
-  }
-  function play(){clearInterval(timer);if(!still&&seen&&!hover)timer=setInterval(()=>show((i+1)%btns.length),4200)}
-  btns.forEach((b,n)=>b.addEventListener('click',()=>{show(n);play()}));
-  g.addEventListener('mouseenter',()=>{hover=true;play()});g.addEventListener('mouseleave',()=>{hover=false;play()});
-  g.addEventListener('focusin',()=>{hover=true;play()});g.addEventListener('focusout',()=>{hover=false;play()});
-  // Only run while on screen, and start each gallery at a slightly different moment so they don't all change together
-  if('IntersectionObserver' in window)new IntersectionObserver(es=>es.forEach(e=>{seen=e.isIntersecting;play()}),{threshold:.3}).observe(g);else seen=true;
-  setTimeout(play,Math.random()*2200);
-});
+// Product galleries: every gallery changes photo at the same moment, with a clean fade out and in
+const gals=[...document.querySelectorAll('.gal')].map(g=>({g,btns:[...g.querySelectorAll('.thumbs button')],main:g.querySelector('.gal-main img'),i:0})).filter(x=>x.btns.length>1);
+function showPhoto(x,n){
+  const b=x.btns[n],pre=new Image();pre.src=b.dataset.src;x.i=n;
+  x.btns.forEach(t=>t.setAttribute('aria-pressed',t===b?'true':'false'));
+  const swap=()=>{x.main.classList.add('out');setTimeout(()=>{x.main.src=b.dataset.src;x.main.alt=b.dataset.alt;x.main.classList.toggle('cover',b.dataset.type==='photo');
+    (x.main.decode?x.main.decode():Promise.resolve()).catch(()=>{}).then(()=>x.main.classList.remove('out'))},500)};
+  (pre.decode?pre.decode():Promise.resolve()).then(swap,swap);
+}
+gals.forEach(x=>x.btns.forEach((b,n)=>b.addEventListener('click',()=>{if(n!==x.i)showPhoto(x,n)})));
+if(gals.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches)
+  setInterval(()=>{if(!document.hidden)gals.forEach(x=>showPhoto(x,(x.i+1)%x.btns.length))},4500);
 // Contact form: posts to Formspree (set your ID in contact.html)
 const form=document.getElementById('contact-form');
 if(form)form.addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('note');
