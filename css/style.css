@@ -96,7 +96,8 @@ nav a:hover,nav a[aria-current]{color:var(--gold-d)}
 .prod h3 a{transition:color var(--ease)}.prod h3 a:hover{color:var(--gold-d)}
 /* Gallery: main image with thumbnail buttons that swap it */
 .gal-main{display:block}.gal-main>a{position:absolute;inset:0;display:block}
-.gal-main img{transition:transform 1.1s cubic-bezier(.2,.6,.2,1)}
+.gal-main img{transition:transform 1.1s cubic-bezier(.2,.6,.2,1),opacity .5s ease}
+.gal-main img.out{opacity:0}
 .gal-main img.cover{object-fit:cover}
 /* Crossfade: the next photo fades in on top, with a gentle settle */
 .gal-main img.xf{opacity:0;transform:scale(1.035);transition:opacity 1.3s ease,transform 1.8s cubic-bezier(.2,.6,.2,1)}
