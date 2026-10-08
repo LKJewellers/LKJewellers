@@ -1,14 +1,18 @@
 # LK Jewellers static site
-**Deploy:** push to GitHub > Settings > Pages > deploy from `main` / root. Add `lkjewellers.co.uk` as the custom domain.
+**Deploy:** push this folder to GitHub > Settings > Pages > deploy from `main` / root. Add `lkjewellers.co.uk` as the custom domain.
 
-**Every page is self-contained.** The CSS and JavaScript are built into each HTML file, so a page looks right even when opened on its own (for example from a download or an email preview). `css/style.css` and `js/main.js` hold the same code as a reference copy; to restyle the whole site, change the same rule in the `<style>` block of each page, or replace that block with `<link rel="stylesheet" href="css/style.css">` (and the script block with `<script src="js/main.js"></script>`) on every page.
+**Every page is self-contained.** The CSS and JavaScript are built into each HTML file, so a page looks right even when opened on its own. `css/style.css` and `js/main.js` hold the same code as a reference copy. To restyle the whole site, change the same rule in the `<style>` block of each page.
 
-**Palette and fonts:** the tokens at the top of the `<style>` block (`--bg #0a0a0a`, `--gold #c8a96a`, and so on).
+**Palette:** light pastel luxury, set as tokens at the top of the `<style>` block: pearl background `#fbf8f5`, blush `#f6ebe6`, sage `#e9eee7`, champagne gold `#c2a167` / `#8a6a36`, charcoal text `#2b2622`.
 
-**Edit products:** each product is one `<article class="prod">` in jewellery.html, engagements.html or watches.html: change the name, text, price and `<img src>`. Prices also appear in the JSON-LD block in each page's `<head>`.
+**Product images** are in `images/` as 1000×1000 WebP files with transparent backgrounds, so each product sits directly on the page colour. They were prepared from the supplied renders: backgrounds removed, soft shadows kept, trimmed and centred at a consistent size, never stretched. To add your own, use a square image with a transparent background (or a clean white one) and the same naming style.
 
-**Images:** Unsplash photos (free licence), hosted by Unsplash for now. Each hero is set in the `style="..."` on the `<section class="hero">`. Replace any link with your own file in an `images/` folder. Replace `favicon.svg` with your own icon.
+**Products:** each product is one `<article class="prod">` in jewellery.html or engagements.html. Prices currently say "Price on request" with an Enquire button. To show a price, replace `<span class="price por">Price on request</span>` with `<span class="price">£1,450</span>`; on the jewellery page you can also swap the Enquire link for `<button class="btn sm add" type="button">Add to cart</button>` (visual only for now).
 
-**Forms:** set `YOUR_FORM_ID` (contact.html) and `YOUR_NEWSLETTER_ID` (footer, every page) from formspree.io. "Add to cart" is visual only. Enquire links open contact.html with the product name pre-filled.
+**Homepage slideshow:** each `<figure class="slide">` in index.html is one product. Add, remove or reorder them; the dots build themselves. It autoplays every 5.5 seconds, pauses on hover and touch, supports swipe, arrows and arrow keys, and stays still for visitors who turn off motion.
 
-**Before launch, check:** the address and phone number in contact.html; the Instagram handle; and that every claim (recycled metals, diamond origin, lifetime care, "UK studio") is true for your business.
+**Watches:** no watch photography was supplied, so the Watches page is an appointment page with a gold line drawing. Add watch products later in the same card format as the other pages.
+
+**Forms:** set `YOUR_FORM_ID` (contact.html) and `YOUR_NEWSLETTER_ID` (footer, every page) from formspree.io. Enquire links open contact.html with the product name pre-filled.
+
+**Before launch, check:** the address and phone number in contact.html; the Instagram handle; the product names and descriptions (stone types, sizes and metals); and that every claim (handmade, lifetime care, UK studio) is true for your business.
