@@ -153,7 +153,7 @@ a.stat:hover{border-color:var(--gold-l)}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .toolbar .search{flex:1;min-width:200px;position:relative}
 .toolbar .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--muted)}
-.toolbar .search input{width:100%;height:46px;border:1px solid var(--line-2);border-radius:999px;padding:0 16px 0 42px;background:var(--paper);font-size:.95rem}
+.toolbar .search input{width:100%;height:46px;border:1px solid var(--line-2);border-radius:999px;padding:0 16px 0 42px;background:var(--paper);font-size:1rem}
 .toolbar .search input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-ll)}
 .toolbar select{height:46px;border:1px solid var(--line-2);border-radius:999px;padding:0 14px;background:var(--paper)}
 
