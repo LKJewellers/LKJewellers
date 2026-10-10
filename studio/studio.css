@@ -6,7 +6,7 @@
 :root{
   --bg:#f8f5f1; --paper:#fffdfb; --ink:#26211d; --ink-2:#4a423c; --muted:#857a71; --faint:#b3a89e;
   --line:#ebe3da; --line-2:#ded3c7; --gold:#b8955a; --gold-d:#8a6a36; --gold-l:#efe3cc; --gold-ll:#f7f0e3;
-  --blush:#f6ebe6; --sage:#e7eee5; --sage-d:#3f6a3c; --rose:#f8e3de; --rose-d:#9b3a2a; --amber:#f6ecd5; --amber-d:#80601c;
+  --blush:#eceeec; --sage:#e7eee5; --sage-d:#3f6a3c; --rose:#f8e3de; --rose-d:#9b3a2a; --amber:#f6ecd5; --amber-d:#80601c;
   --sky:#e3ecf2; --sky-d:#2f5873; --violet:#ece7f3; --violet-d:#5a4683;
   --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif; --sans:'Jost',system-ui,-apple-system,'Segoe UI',sans-serif;
   --r:14px; --r-s:10px; --shadow:0 1px 2px rgba(60,40,20,.04),0 8px 24px rgba(60,40,20,.06); --shadow-l:0 24px 60px rgba(40,25,10,.18);

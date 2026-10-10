@@ -1,0 +1,34 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in or create an account | LK Jewellers London</title><meta name="description" content="Sign in to your LK Jewellers account."><meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="../css/style.css"><link rel="stylesheet" href="../css/portal.css"></head>
+<body data-page="auth"><header><div class="wrap bar">
+<a class="logo" href="../index.html">LK <span>Jewellers</span><small class="lt">London</small></a>
+<nav id="menu" aria-label="Main"><ul><li><a href="../index.html" aria-current="page">Home</a></li><li><a href="../jewellery.html">Jewellery</a></li><li><a href="../pendants.html">Pendants</a></li><li><a href="../engagements.html">Engagements</a></li><li><a href="../about.html">About</a></li><li><a href="../contact.html">Contact</a></li></ul></nav>
+<button class="menu-btn" aria-expanded="false" aria-controls="menu">Menu</button>
+</div></header>
+<main class="pg"><div class="wrap"><div class="narrow" id="app"><div class="center"><span class="label">Your account</span><h1>Welcome</h1><p class="muted">Your quotes, orders, invoices and designs, in one private place.</p></div>
+<div class="tabs" role="tablist"><button data-p="signin" role="tab">Sign in</button><button data-p="join" role="tab">Create account</button></div>
+<section class="panel" id="signin"><form id="signin-form" novalidate><label>Email<input name="email" type="email" autocomplete="email" required></label>
+<label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+<button class="btn solid" type="submit">Sign in</button><p class="msg" id="signin-msg" hidden></p>
+<p><button type="button" class="link" id="resend" hidden>Send me a new confirmation link</button></p>
+<p><button type="button" class="link" data-go="forgot">Forgot password?</button></p></form></section>
+<section class="panel" id="join" hidden><form id="join-form" novalidate><p class="muted">Enter your name and email. We will send you a link to confirm your email, then you choose a password. Your email is your login.</p>
+<label>Full name<input name="full_name" autocomplete="name" required maxlength="120"></label>
+<label>Email<input name="email" type="email" autocomplete="email" required></label>
+<label class="check"><input type="checkbox" name="privacy" required><span>I agree to LK Jewellers keeping my details to manage my account and orders.</span></label>
+<label class="check"><input type="checkbox" name="marketing"><span>Send me news and offers (optional, change any time).</span></label>
+<button class="btn solid" type="submit">Email me a link</button><p class="msg" id="join-msg" hidden></p></form>
+<div id="join-done" class="notice" hidden><b>Check your email</b><p>We have sent a secure link to <span id="join-email"></span>. Open it to confirm your email and create your password. It expires after a while, so use it soon.</p></div></section>
+<section class="panel" id="forgot" hidden><form id="forgot-form" novalidate><p class="muted">Enter your email and we will send a secure link to choose a new password.</p>
+<label>Email<input name="email" type="email" autocomplete="email" required></label><button class="btn solid" type="submit">Send reset link</button><p class="msg" id="forgot-msg" hidden></p>
+<p><button type="button" class="link" data-go="signin">Back to sign in</button></p></form></section></div></div></main><footer><div class="wrap"><div class="foot">
+<div><a class="logo" href="../index.html">LK <span>Jewellers</span><small class="lt">London</small></a><p style="margin-top:16px" data-content="home_footer_line">Independent fine jeweller. Handcrafted, hand-finished and cared for for life.</p></div>
+<div><p class="fh">Shop</p><ul><li><a href="../jewellery.html">Jewellery</a></li><li><a href="../engagements.html">Engagements</a></li><li><a href="../pendants.html">Pendants</a></li><li><a href="../latest.html">New in</a></li><li><a href="../engagements.html#bespoke">Bespoke</a></li></ul></div>
+<div><p class="fh">Studio</p><ul><li><a href="../about.html">About us</a></li><li><a href="../contact.html">Contact</a></li><li><a href="../account/index.html">My account</a></li><li><a href="https://instagram.com/lkjewellers" rel="noopener">Instagram</a></li></ul></div>
+<div><p class="fh">Stay in touch</p><p>New pieces and studio news, sent sparingly.</p>
+<!-- Newsletter: create a free form at formspree.io and replace YOUR_NEWSLETTER_ID -->
+<form class="sub-form" action="https://formspree.io/f/YOUR_NEWSLETTER_ID" method="POST"><input type="email" name="email" placeholder="Your email" aria-label="Email address" required><button class="btn solid" type="submit">Join</button></form></div>
+</div>
+<p class="copy">&copy; <span id="year"></span> LK Jewellers. All rights reserved. lkjewellers.co.uk</p></div></footer><script src="../js/config.js"></script><script src="../js/lk-db.js"></script><script src="../js/lk.js"></script><script src="../js/main.js"></script><script src="../js/account.js"></script></body></html>
