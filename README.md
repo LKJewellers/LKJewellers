@@ -7,11 +7,11 @@
 
 **Palette:** neutral unisex palette: off-white background `#f7f7f5`, stone `#eceeec`, mist `#e9edeb`, champagne gold `#c2a167` / `#8a6a36`, ink text `#1e2327`, slate grey `#5a6167`.
 
-**Images:** `images/<product>-1.webp`, `-2`, `-3`… are each product's gallery (1000×1000, transparent backgrounds, `-1` is the main image). `thumbs/` (at the root, next to `images/`) holds 200px versions used for the thumbnail buttons. All were prepared from the supplied renders: backgrounds removed, soft shadows kept, trimmed and centred at a consistent size, never stretched. One lifestyle photo (`infinity-cross-4`) is kept as a photo.
+**Images:** `images/<product>-1.webp`, `-2`, `-3`… are each product's gallery (1000×1000, transparent backgrounds, `-1` is the main image). `thumbs/` (at the root, next to `images/`) holds 200px versions used for the thumbnail buttons. All were prepared from the supplied renders: backgrounds removed, soft shadows kept, trimmed and centred at a consistent size, never stretched.
 
 **Galleries:** on cards and product pages, each thumbnail is a `<button data-src="images/…webp">`. Clicking it swaps the main image. To add a view, add an image file and another button in the same format.
 
-**Products:** each product card is one `<article class="prod">` in jewellery.html or engagements.html (and in "Related pieces" on product pages). Prices currently say "Price on request". To show a price, replace `<span class="price por">Price on request</span>` with `<span class="price">£1,450</span>` on the card and on the product page, and optionally add an `"offers"` block to that page's JSON-LD.
+**Products:** each product card is one `<article class="prod">` in jewellery.html or engagements.html (and in "Related pieces" on product pages). Every piece now shows a price and a **Buy now** button that opens its own Stripe payment link (made to order, UK delivery). Prices are rough high estimates (18ct gold, natural diamonds). To change a price, change it on the card, on the product page and in the JSON-LD "offers", and create a new payment link in Stripe (payment links cannot change price).
 
 **Homepage slideshow:** each `<figure class="slide">` in index.html is one product and links to its product page. Add, remove or reorder them; the dots build themselves.
 

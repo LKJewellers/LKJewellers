@@ -215,7 +215,7 @@ nav.open{display:block}nav ul{flex-direction:column;gap:0}nav a{display:block;pa
 <section class="hero"><div class="wrap hero-grid"><div><span class="label">Contact</span><h1>Get in touch</h1><span class="orn"></span><p>We reply within one working day.</p></div><div class="hero-img"><img src="images/cushion-halo-1.webp" alt="Cushion halo engagement ring" width="1000" height="1000" fetchpriority="high" decoding="async"></div></div></section><section class="sec "><div class="wrap"><div class="split" style="align-items:start">
 <!-- Replace these details with your own -->
 <div class="rv"><span class="label">London</span><h2>Write to us</h2><p>Based in London. Consultations are by appointment.</p><p style="margin-top:16px">Tuesday to Saturday, 10am to 5pm</p>
-<p style="margin-top:16px"><a href="tel:+440000000000">+44 (0)00 0000 0000</a><br><a href="mailto:hello@lkjewellers.co.uk">hello@lkjewellers.co.uk</a></p></div>
+<p style="margin-top:16px"><a href="tel:+440000000000">+44 (0)00 0000 0000</a><br><a href="mailto:sales@lkjewellers.co.uk">sales@lkjewellers.co.uk</a></p></div>
 <!-- FORM: create a free form at formspree.io and replace YOUR_FORM_ID -->
 <form id="contact-form" class="rv" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
 <label>Name<input name="name" required autocomplete="name"></label>
@@ -284,7 +284,7 @@ if(gals.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches)
 const form=document.getElementById('contact-form');
 if(form)form.addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('note');
   try{const r=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{Accept:'application/json'}});if(!r.ok)throw 0;form.reset();n.textContent='Thank you. We will reply within one working day.'}
-  catch{n.textContent='Message not sent. Please email hello@lkjewellers.co.uk instead.'}});
+  catch{n.textContent='Message not sent. Please email sales@lkjewellers.co.uk instead.'}});
 // "Add to cart" is visual only for now: it just confirms the click
 document.querySelectorAll('.add').forEach(b=>b.addEventListener('click',()=>{b.textContent='Added';b.classList.add('added');setTimeout(()=>{b.textContent='Add to cart';b.classList.remove('added')},1800)}));
 // "Enquire" links use contact.html?enquire=Product+name; this pre-fills the message box

@@ -48,7 +48,7 @@ if(gals.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches)
 const form=document.getElementById('contact-form');
 if(form)form.addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('note');
   try{const r=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{Accept:'application/json'}});if(!r.ok)throw 0;form.reset();n.textContent='Thank you. We will reply within one working day.'}
-  catch{n.textContent='Message not sent. Please email hello@lkjewellers.co.uk instead.'}});
+  catch{n.textContent='Message not sent. Please email sales@lkjewellers.co.uk instead.'}});
 // "Add to cart" is visual only for now: it just confirms the click
 document.querySelectorAll('.add').forEach(b=>b.addEventListener('click',()=>{b.textContent='Added';b.classList.add('added');setTimeout(()=>{b.textContent='Add to cart';b.classList.remove('added')},1800)}));
 // "Enquire" links use contact.html?enquire=Product+name; this pre-fills the message box

@@ -29,7 +29,7 @@
       if (!r.ok) throw new Error(j.error || 'failed');
       form.reset(); say('Thank you. We have received your enquiry' + (j.ref ? ' (reference ' + j.ref + ')' : '') + ' and will reply within one working day.' + (j.files_failed ? ' Some files could not be attached; please email them to us.' : ''));
     } catch (err) {
-      say(err.message && err.message !== 'failed' && !/fetch/i.test(err.message) ? err.message : 'Sorry, your message could not be sent. Please try again, or email hello@lkjewellers.co.uk.');
+      say(err.message && err.message !== 'failed' && !/fetch/i.test(err.message) ? err.message : 'Sorry, your message could not be sent. Please try again, or email sales@lkjewellers.co.uk.');
     } finally { btn.disabled = false; }
   }, true);
 })();
