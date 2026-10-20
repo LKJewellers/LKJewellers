@@ -39,21 +39,21 @@
       const staff = S.must(await S.db.from('staff').select('*').order('role').order('full_name')); S.cache.staff = null;
       S.render(el, html`<div class="row-between" style="margin-bottom:14px"><p class="muted small" style="margin:0">Team members sign in to LK Studio. Customers can never sign in here.</p><button class="btn gold" id="inv">${icon('plus')} Invite team member</button></div>
         <div class="list">${staff.map(m => html`<div class="li"><span class="avatar">${S.initials(m.full_name)}</span><span class="main-t"><span class="t" style="display:block">${m.full_name}${m.user_id === S.user.id ? ' (you)' : ''}</span><span class="d" style="display:block">${m.email} · added ${date(m.created_at)}</span></span>
-          <span class="end"><span class="pill ${m.active ? (m.role === 'owner' ? 'violet' : 'blue') : 'grey'}">${m.active ? (m.role === 'owner' ? 'Owner' : 'Team') : 'Access off'}</span>${m.role !== 'owner' ? html`<span class="tiny muted">${m.can_view_finance ? 'Can see finances' : 'No finance access'}</span>` : ''}</span>
+          <span class="end"><span class="pill ${m.active ? (m.role === 'owner' ? 'violet' : 'blue') : 'grey'}">${m.active ? (m.role === 'owner' ? 'Admin' : 'Team') : 'Access off'}</span>${m.role !== 'owner' ? html`<span class="tiny muted">${m.can_view_finance ? 'Can see finances' : 'No finance access'}</span>` : ''}</span>
           ${m.user_id !== S.user.id ? html`<button class="btn sm" data-m="${m.user_id}">Manage</button>` : ''}</div>`)}</div>
-        <section class="card flat" style="margin-top:18px"><h3>What each role can do</h3>${S.kv([['Owner', 'Everything: approve and publish products, set KPIs and targets, see finances, manage the team and settings, view the audit log.'],
+        <section class="card flat" style="margin-top:18px"><h3>What each role can do</h3>${S.kv([['Admin', 'Everything: approve and publish products, set KPIs and targets, see finances, manage the team and settings, view the audit log.'],
           ['Team', 'Day-to-day work: customers, enquiries, products (prepare and submit), suppliers, purchasing, quotes, orders, invoices, tasks and notes. Cannot approve or publish products, change approved prices, set targets or manage the team.'],
           ['Finance access', 'Optional for team members: lets them see the finance dashboard, payments, outgoings and money figures.']])}</section>`);
       $('#inv', el).onclick = () => {
         const s = S.sheet({ title: 'Invite team member', body: html`<form class="form" id="if"><label class="fld"><span>Full name</span><input name="full_name" maxlength="120"></label><label class="fld"><span>Work email</span><input name="email" type="email"></label>
-          <label class="fld"><span>Role</span><select name="role">${S.opts([['staff', 'Team member'], ['owner', 'Owner (full control)']])}</select></label><label class="check"><input type="checkbox" name="can_view_finance"><span>Can see financial information</span></label></form>
+          <label class="fld"><span>Role</span><select name="role">${S.opts([['staff', 'Team member'], ['owner', 'Admin (full control)']])}</select></label><label class="check"><input type="checkbox" name="can_view_finance"><span>Can see financial information</span></label></form>
           <p class="small muted">They will receive an email to set their own password.</p>`, foot: html`<button class="btn ghost" data-close>Cancel</button><button class="btn gold" id="ok">Send invitation</button>` });
         $('#ok', s.el).onclick = e => { const f = $('#if', s.el), o = S.form(f); S.clearErr(f); if (!o.full_name) return S.fieldErr(f, 'full_name', 'Enter their name'); if (!S.validEmail(o.email)) return S.fieldErr(f, 'email', 'Enter a valid email');
           S.act(e.currentTarget, async () => { await S.worker('/staff/invite', o); s.close(); SECTIONS.team(el); }, 'Invitation sent').catch(() => {}); };
       };
       S.on(el, '[data-m]', 'click', (e, b) => {
         const m = staff.find(x => x.user_id === b.dataset.m);
-        const s = S.sheet({ title: m.full_name, body: html`<form class="form" id="mf"><label class="fld"><span>Role</span><select name="role">${S.opts([['staff', 'Team member'], ['owner', 'Owner']], m.role)}</select></label>
+        const s = S.sheet({ title: m.full_name, body: html`<form class="form" id="mf"><label class="fld"><span>Role</span><select name="role">${S.opts([['staff', 'Team member'], ['owner', 'Admin']], m.role)}</select></label>
           <label class="check"><input type="checkbox" name="can_view_finance" ${m.can_view_finance ? 'checked' : ''}><span>Can see financial information</span></label></form>
           <div class="hr"></div><div class="row-between"><div><b>${m.active ? 'Access is on' : 'Access is off'}</b><div class="small muted">${m.active ? 'Switching off signs them out of LK Studio.' : 'Switch on to let them sign in again.'}</div></div><button class="btn ${m.active ? 'danger' : ''}" id="tog">${m.active ? 'Switch off access' : 'Switch on access'}</button></div>`,
           foot: html`<button class="btn ghost" data-close>Cancel</button><button class="btn gold" id="ok">Save</button>` });
@@ -79,7 +79,7 @@
         <label class="check"><input type="checkbox" name="registered" ${vat.registered !== false ? 'checked' : ''} ${ro ? 'disabled' : ''}><span>LK Jewellers is VAT registered</span></label>
         <label class="check"><input type="checkbox" name="prices_include_vat" ${vat.prices_include_vat !== false ? 'checked' : ''} ${ro ? 'disabled' : ''}><span>Prices include VAT (normal for shops selling to the public)</span></label>
         <label class="fld" style="max-width:200px"><span>Standard VAT rate %</span><input name="default_rate" inputmode="decimal" value="${vat.default_rate ?? 20}" ${ro ? 'disabled' : ''}></label></form>
-        ${ro ? html`<p class="small muted">Only the owner can change these details.</p>` : html`<div class="flex" style="justify-content:flex-end;margin-top:16px"><button class="btn gold" id="sv">Save</button></div>`}</section>`);
+        ${ro ? html`<p class="small muted">Only the admin can change these details.</p>` : html`<div class="flex" style="justify-content:flex-end;margin-top:16px"><button class="btn gold" id="sv">Save</button></div>`}</section>`);
       const sv = $('#sv', el); if (sv) sv.onclick = e => { const f = $('#bf', el), o = S.form(f); S.clearErr(f); if (!/^\d{1,3}$/.test(o.payment_terms_days)) return S.fieldErr(f, 'payment_terms_days', 'Use a number of days');
         S.act(e.currentTarget, async () => { await saveSetting('business', { name: o.name, website: o.website, address: o.address, email: o.email, phone: o.phone, company_number: o.company_number, vat_number: o.vat_number, bank_details: o.bank_details, payment_terms_days: +o.payment_terms_days, invoice_footer: o.invoice_footer, tagline: 'London' });
           await saveSetting('vat', { registered: !!o.registered, prices_include_vat: !!o.prices_include_vat, default_rate: +o.default_rate || 20 }); }, 'Saved').catch(() => {}); };
@@ -142,7 +142,7 @@
     },
     // ---------------- my account ----------------
     async account(el) {
-      S.render(el, html`<section class="card" style="max-width:560px"><h2>${S.me.full_name}</h2><p class="muted">${S.me.email} · ${S.me.role === 'owner' ? 'Owner' : 'Team member'}</p>
+      S.render(el, html`<section class="card" style="max-width:560px"><h2>${S.me.full_name}</h2><p class="muted">${S.me.email} · ${S.me.role === 'owner' ? 'Admin' : 'Team member'}</p>
         <form class="form" id="pw"><div class="section-t">Change password</div><label class="fld"><span>New password <em>(at least 10 characters)</em></span><input type="password" name="p1" autocomplete="new-password"></label>
         <label class="fld"><span>Repeat new password</span><input type="password" name="p2" autocomplete="new-password"></label><button class="btn gold" type="submit">Update password</button></form></section>`);
       $('#pw', el).onsubmit = e => { e.preventDefault(); const f = e.target, o = S.form(f); S.clearErr(f);

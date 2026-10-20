@@ -125,9 +125,9 @@
     const owner = S.isOwner();
     S.render(v, html`${S.page({ title: 'KPIs & targets', sub: 'Progress is calculated from your real records', acts: owner ? html`<button class="btn gold" id="add">${icon('plus')} New target</button>` : '' })}
       ${prog.length ? html`<div class="grid g2">${prog.map(k => { const st = S.kpiStatus(k.status); return html`<section class="card"><div class="kpi">${S.ring(k.restricted ? null : k.pct, k.status)}<div class="grow"><div class="n">${k.name}</div>
-        <div class="v">${S.kpiValue(k)}</div><div class="tiny muted">${k.restricted ? 'Financial target: owner and finance access only' : 'Target ' + S.kpiTarget(k) + ' · ' + S.date(k.from) + ' – ' + S.date(k.to)}</div></div>
+        <div class="v">${S.kpiValue(k)}</div><div class="tiny muted">${k.restricted ? 'Financial target: admin and finance access only' : 'Target ' + S.kpiTarget(k) + ' · ' + S.date(k.from) + ' – ' + S.date(k.to)}</div></div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">${k.restricted ? '' : html`<span class="pill ${st[1]}">${st[0]}</span>`}${owner ? html`<button class="btn sm ghost" data-edit="${k.id}">Edit</button>` : ''}</div></div></section>`; })}</div>`
-        : S.empty({ icon: 'target', title: 'No targets yet', text: owner ? 'Set targets for revenue, profit, enquiries and more. Progress updates automatically.' : 'The owner has not set any targets yet.', action: owner ? html`<button class="btn gold" id="add2">${icon('plus')} New target</button>` : '' })}
+        : S.empty({ icon: 'target', title: 'No targets yet', text: owner ? 'Set targets for revenue, profit, enquiries and more. Progress updates automatically.' : 'The admin has not set any targets yet.', action: owner ? html`<button class="btn gold" id="add2">${icon('plus')} New target</button>` : '' })}
       ${owner && all.some(k => !k.active) ? html`<section class="card" style="margin-top:18px"><h3>Switched off</h3><div class="list">${all.filter(k => !k.active).map(k => html`<div class="li"><span class="main-t"><span class="t">${k.name}</span></span><button class="btn sm" data-edit="${k.id}">Edit</button></div>`)}</div></section>` : ''}`);
     const open = k => kpiSheet(k);
     [$('#add', v), $('#add2', v)].filter(Boolean).forEach(b => b.onclick = () => open(null));

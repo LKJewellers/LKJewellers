@@ -1,4 +1,4 @@
-/* LK Studio: Products — list, guided "Add product" flow, costing & pricing, owner review, publishing, stock. */
+/* LK Studio: Products — list, guided "Add product" flow, costing & pricing, admin review, publishing, stock. */
 (function () {
   const { html, raw, icon, money, pct, date, dateTime, ago, pill, $, $$ } = S;
   const CATEGORIES = ['Engagement rings', 'Wedding bands', 'Rings', 'Earrings', 'Necklaces', 'Pendants', 'Bracelets', 'Bespoke', 'Gifts', 'Other'];
@@ -29,6 +29,62 @@
     <div class="metric" style="margin-top:12px"><div><b>${pct(k.margin)}</b><span>Margin</span></div><div><b>${pct(k.markup)}</b><span>Markup</span></div><div><b>${k.qty}</b><span>In stock</span></div></div>
     ${k.qty > 0 && k.gp != null ? html`<p class="small muted" style="margin:10px 0 0">If all ${k.qty} in stock sell: revenue ${money(k.revenue)} (ex VAT), gross profit ${money(k.profit)}.</p>` : ''}
     <p class="explain" style="margin-top:12px"><b>Margin</b> is profit as a share of the net selling price (${k.gp != null && k.net ? money(k.gp) + ' ÷ ' + money(k.net) : 'profit ÷ net price'}). <b>Markup</b> is profit as a share of what the piece cost you (${k.gp != null && k.landed ? money(k.gp) + ' ÷ ' + money(k.landed) : 'profit ÷ landed cost'}).</p>`;
+
+  // ---------- stop the browser opening a photo when it is dropped outside a drop zone ----------
+  if (!window.__lkDropGuard) { window.__lkDropGuard = true;
+    const isFile = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+    window.addEventListener('dragover', e => { if (isFile(e)) e.preventDefault(); });
+    window.addEventListener('drop', e => { if (isFile(e)) e.preventDefault(); }); }
+
+  // ---------- spelling: common slips -> correct British spelling ----------
+  const FIX = { jewelry: 'jewellery', jewlery: 'jewellery', jewellry: 'jewellery', jewelery: 'jewellery', jewlry: 'jewellery', jewllery: 'jewellery', jewelrey: 'jewellery',
+    diamand: 'diamond', dimond: 'diamond', diamon: 'diamond', dimonds: 'diamonds', diamands: 'diamonds', daimond: 'diamond', daimonds: 'diamonds',
+    neckless: 'necklace', necklase: 'necklace', neclace: 'necklace', necklesses: 'necklaces', earings: 'earrings', earing: 'earring', erings: 'earrings', earrrings: 'earrings',
+    braclet: 'bracelet', bracellet: 'bracelet', braslet: 'bracelet', braclets: 'bracelets', saphire: 'sapphire', sapphir: 'sapphire', safire: 'sapphire', saphires: 'sapphires',
+    emarald: 'emerald', emrald: 'emerald', emerold: 'emerald', rubby: 'ruby', rubie: 'ruby', platnium: 'platinum', platinium: 'platinum', platnum: 'platinum',
+    moissonite: 'moissanite', moisanite: 'moissanite', mossanite: 'moissanite', moissinite: 'moissanite', moissenite: 'moissanite', pendent: 'pendant', pendat: 'pendant', pendents: 'pendants',
+    carrat: 'carat', carot: 'carat', carrot: 'carat', sterlin: 'sterling', sterlng: 'sterling', silva: 'silver', gould: 'gold', goald: 'gold',
+    engagment: 'engagement', engagemnt: 'engagement', engement: 'engagement', engagemant: 'engagement', weding: 'wedding', wedingband: 'wedding band',
+    beautifull: 'beautiful', beutiful: 'beautiful', butiful: 'beautiful', beatiful: 'beautiful', beautful: 'beautiful', elegent: 'elegant', elagant: 'elegant',
+    sparkel: 'sparkle', sparkely: 'sparkly', definately: 'definitely', recieve: 'receive', solitare: 'solitaire', solitair: 'solitaire', soliter: 'solitaire',
+    eternaty: 'eternity', eternety: 'eternity', brillant: 'brilliant', briliant: 'brilliant', luxery: 'luxury', luxary: 'luxury', quailty: 'quality', qualaty: 'quality',
+    color: 'colour', colors: 'colours', gray: 'grey', center: 'centre', centered: 'centred', polised: 'polished', craftsmenship: 'craftsmanship', craftmanship: 'craftsmanship',
+    gorgous: 'gorgeous', gorgeus: 'gorgeous', stunnning: 'stunning', stuning: 'stunning', timless: 'timeless', classsic: 'classic', clasic: 'classic', delicat: 'delicate',
+    perfact: 'perfect', prefect: 'perfect', occassion: 'occasion', ocasion: 'occasion', anniversery: 'anniversary', aniversary: 'anniversary', seperate: 'separate',
+    adjustible: 'adjustable', chane: 'chain', cuben: 'cuban', cubin: 'cuban', tenis: 'tennis', halow: 'halo', baguete: 'baguette', bagette: 'baguette',
+    marquis: 'marquise', cusion: 'cushion', cushon: 'cushion', princes: 'princess', radient: 'radiant', yello: 'yellow', yelow: 'yellow' };
+  const slips = text => { const out = [], seen = new Set();
+    (String(text || '').match(/[A-Za-z]+/g) || []).forEach(w => { const k = w.toLowerCase(); if (FIX[k] && !seen.has(k)) { seen.add(k); out.push([w, FIX[k]]); } }); return out; };
+  const fixWord = (text, wrong, right) => text.replace(new RegExp('\\b' + wrong + '\\b', 'gi'), m => m[0] === m[0].toUpperCase() ? right[0].toUpperCase() + right.slice(1) : right);
+  const titleCase = s => s.replace(/\s+/g, ' ').trim().split(' ').map((w, i) => /^\d/.test(w) ? w.toLowerCase() : (i && /^(and|of|with|in|on|the|a)$/i.test(w)) ? w.toLowerCase() : w[0].toUpperCase() + w.slice(1)).join(' ');
+  const tidyText = t => { t = String(t || '').replace(/[ \t]+/g, ' ').replace(/ +([,.!?])/g, '$1').replace(/([,.!?])(?=[A-Za-z])/g, '$1 ').replace(/\bi\b/g, 'I').trim();
+    t = t.replace(/(^|[.!?]\s+|\n)([a-z])/g, (m, a, b) => a + b.toUpperCase()); if (t && !/[.!?]$/.test(t)) t += '.'; return t; };
+
+  // ---------- name and description helpers ----------
+  const NOUN = { 'Engagement rings': 'Engagement Ring', 'Wedding bands': 'Band', 'Rings': 'Ring', 'Earrings': 'Earrings', 'Necklaces': 'Necklace', 'Pendants': 'Pendant', 'Bracelets': 'Bracelet' };
+  const AREAS = ['Mayfair', 'Belgravia', 'Kensington', 'Chelsea', 'Knightsbridge', 'Marylebone', 'Hampstead', 'Richmond', 'Notting Hill', 'Holland Park', 'Bloomsbury', 'Covent Garden', 'Primrose', 'Greenwich', 'Highgate', 'Southbank', 'Regent', 'Savoy', 'Westminster', 'Pimlico'];
+  const pickWord = (txt, list) => { const t = String(txt || '').toLowerCase(); return list.find(w => t.includes(w.toLowerCase())) || ''; };
+  const nameIdeas = o => {
+    const noun = NOUN[o.category] || 'Piece';
+    const stone = pickWord(o.gemstone, ['Diamond', 'Sapphire', 'Emerald', 'Ruby', 'Moissanite', 'Pearl']);
+    const shape = pickWord(o.gemstone + ' ' + o.subcategory, ['Emerald cut', 'Round', 'Oval', 'Pear', 'Princess', 'Cushion', 'Marquise', 'Radiant', 'Heart', 'Baguette']);
+    const style = pickWord(o.subcategory + ' ' + o.name, ['Solitaire', 'Halo', 'Trilogy', 'Three Stone', 'Eternity', 'Tennis', 'Cuban', 'Hoop', 'Stud', 'Cluster', 'Twist']);
+    const metal = pickWord(o.metal, ['Yellow Gold', 'White Gold', 'Rose Gold', 'Platinum', 'Silver']);
+    const core = [shape, stone, style].filter(Boolean).map(titleCase).join(' ');
+    const out = new Set();
+    if (core) out.add(titleCase(`${core} ${noun}`));
+    if (core && metal) out.add(titleCase(`${metal} ${core} ${noun}`));
+    const areas = AREAS.slice().sort(() => Math.random() - 0.5);
+    for (const a of areas) { if (out.size >= 6) break; out.add(titleCase(`The ${a} ${shape || stone || style || ''} ${noun}`)); }
+    return [...out];
+  };
+  const writeDesc = o => {
+    const noun = (NOUN[o.category] || 'piece').toLowerCase(), pair = noun === 'earrings';
+    let s = pair ? 'A beautiful pair of earrings' : `A beautiful ${noun}`;
+    if (o.metal) s += ` crafted in ${o.metal.toLowerCase().replace(/ct/, 'ct')}`;
+    if (o.gemstone) s += `, set with ${pair ? '' : (/^[aeiou]/i.test(o.gemstone) ? 'an ' : 'a ')}${o.gemstone.toLowerCase()}`;
+    return s + '. Designed and finished by LK Jewellers in London.';
+  };
 
   const productThumb = p => { const im = (p.product_images || []).sort((a, b) => (b.is_primary - a.is_primary) || a.position - b.position)[0]; return im ? S.publicImg(im.path) : ''; };
 
@@ -86,11 +142,11 @@
     S.render(v, html`${S.page({ title: prod.name || 'New product', crumb: ['Product', '#/products/' + prod.id], sub: html`${pill('product', prod.status)}` })}
       <nav class="steps" aria-label="Steps">${STEPS.map(([k, l], j) => html`<a href="#/products/${prod.id}/edit?step=${k}" class="${j < i ? 'done' : ''} ${j === i ? 'on' : ''}" ${j === i ? raw('aria-current="step"') : ''}><i></i>${j + 1}<span class="lbl">. ${l}</span></a>`)}</nav>
       ${prod.status === 'changes_requested' ? html`<div id="ownernote"></div>` : ''}
-      ${locked ? S.banner('info', 'Approved product', 'You can update photos, details and costs. Only the owner can change the price of an approved product.') : ''}
+      ${locked ? S.banner('info', 'Approved product', 'You can update photos, details and costs. Only the admin can change the price of an approved product.') : ''}
       <div id="step" class="has-wizbar"></div>`);
     if (prod.status === 'changes_requested') {
       const n = S.must(await S.db.from('product_review_notes').select('*').eq('product_id', prod.id).eq('action', 'request_changes').order('created_at', { ascending: false }).limit(1))[0];
-      if (n) S.render($('#ownernote', v), S.banner('warn', 'The owner asked for changes', html`<p class="pre" style="margin:4px 0 0">${n.note}</p>`));
+      if (n) S.render($('#ownernote', v), S.banner('warn', 'The admin asked for changes', html`<p class="pre" style="margin:4px 0 0">${n.note}</p>`));
     }
     const next = () => S.go(`#/products/${prod.id}/edit?step=${STEPS[Math.min(i + 1, STEPS.length - 1)][0]}`);
     const prev = i > 0 ? `#/products/${prod.id}/edit?step=${STEPS[i - 1][0]}` : '#/products/' + prod.id;
@@ -111,9 +167,11 @@
             <button type="button" data-del="${im.id}" aria-label="Remove photo">${icon('trash')}</button></div></div>`)}
             <label class="ph-add">${icon('camera')}Take photo<input type="file" accept="image/*" capture="environment" data-up></label>
             <label class="ph-add">${icon('upload')}Upload photos<input type="file" accept="image/*" multiple data-up></label></div>
+          <div id="dropz" class="dropz">${icon('upload')} <b>Drag photos here</b> <span class="muted">from a folder or the desktop</span></div>
           ${!imgs.length ? html`<p class="muted small" style="margin:14px 0 0">No photos yet. You can add them later too.</p>` : ''}</section>${wizbar(w.prev, imgs.length ? 'Continue' : 'Skip for now')}`);
-        S.$$('[data-up]', el).forEach(inp => inp.onchange = async () => {
-          const files = [...inp.files]; if (!files.length) return;
+        const uploadFiles = async files => {
+          files = files.filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif|gif)$/i.test(f.name));
+          if (!files.length) return S.toast('That is not a photo. Drag a JPG or PNG file.', { bad: true });
           const grid = $('#ph', el); let pos = imgs.length ? Math.max(...imgs.map(x => x.position)) + 1 : 0, failed = [];
           for (const f of files) {
             const tile = document.createElement('div'); tile.className = 'ph-up'; tile.textContent = 'Uploading…'; grid.insertBefore(tile, grid.querySelector('.ph-add'));
@@ -125,7 +183,15 @@
           }
           if (failed.length) S.toast('Some photos did not upload. ' + failed[0], { bad: true }); else S.toast(files.length + ' photo' + (files.length > 1 ? 's' : '') + ' added');
           draw();
-        });
+        };
+        S.$$('[data-up]', el).forEach(inp => inp.onchange = () => { const files = [...inp.files]; inp.value = ''; if (files.length) uploadFiles(files); });
+        // Drag and drop anywhere on the photos card (stops the browser opening the photo instead)
+        const card = el.querySelector('section.card'), dz = $('#dropz', el);
+        const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+        card.addEventListener('dragenter', e => { if (hasFiles(e)) { e.preventDefault(); dz.classList.add('over'); } });
+        card.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dz.classList.add('over'); } });
+        card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) dz.classList.remove('over'); });
+        card.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const files = [...(e.dataTransfer.files || [])]; if (files.length) uploadFiles(files); else S.toast('Drag the photo file itself (from a folder or the desktop), not from a web page.', { bad: true }); });
         S.on(el, '[data-prim]', 'click', (e, b) => S.act(b, async () => { S.must(await S.db.from('product_images').update({ is_primary: true }).eq('id', b.dataset.prim)); draw(); }, 'Main photo set').catch(() => {}));
         S.on(el, '[data-mv]', 'click', (e, b) => {
           const [id, d] = b.dataset.mv.split('|'); const k = imgs.findIndex(x => x.id === id); const o = imgs[k + +d]; if (!o) return;
@@ -144,7 +210,10 @@
     async details(el, prod, w) {
       const cats = CATEGORIES.includes(prod.category) || !prod.category ? CATEGORIES : [prod.category, ...CATEGORIES];
       S.render(el, html`<section class="card"><h2>Details</h2><form class="form" id="df" novalidate style="margin-top:12px">
-        <label class="fld"><span>Product name</span><input name="name" value="${prod.name}" maxlength="140" required placeholder="e.g. Oval Solitaire Engagement Ring"></label>
+        <label class="fld"><span>Product name <em>(type your own, or tap Suggest names)</em></span><input name="name" value="${prod.name}" maxlength="140" required placeholder="e.g. Oval Solitaire Engagement Ring" spellcheck="true" lang="en-GB" autocapitalize="words"></label>
+        <div class="flex" style="margin-top:-6px"><button class="btn sm" type="button" id="sugn">${icon('sparkle')} Suggest names</button><span class="small muted">Pick the category, metal and stone first for better ideas.</span></div>
+        <div id="names" class="chips" style="flex-wrap:wrap"></div>
+        <div id="spell"></div>
         <div class="row"><label class="fld"><span>Category</span><select name="category"><option value="">Choose…</option>${S.opts(cats.map(c => [c, c]), prod.category)}</select></label>
           <label class="fld"><span>Subcategory <em>(optional)</em></span><input name="subcategory" value="${prod.subcategory || ''}" maxlength="80" placeholder="e.g. Solitaire"></label></div>
         <label class="fld"><span>Type of product</span><select name="product_type">${S.opts(TYPES, prod.product_type)}</select><small id="typehint"></small></label>
@@ -157,7 +226,8 @@
           <datalist id="metals"><option>18ct yellow gold</option><option>18ct white gold</option><option>18ct rose gold</option><option>9ct yellow gold</option><option>Platinum</option><option>Sterling silver</option></datalist>
           <div class="row"><label class="fld"><span>Weight (g) <em>(if known)</em></span><input name="weight_g" value="${prod.weight_g ?? ''}" inputmode="decimal"></label>
             <label class="fld"><span>Size / dimensions <em>(if relevant)</em></span><input name="dimensions" value="${prod.dimensions || ''}" maxlength="80" placeholder="e.g. Ring size L, 2.2mm band"></label></div></div>
-        <label class="fld"><span>Description <em>(shown on the website)</em></span><textarea name="description" maxlength="4000" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
+        <label class="fld"><span>Description <em>(shown on the website, at least one full sentence)</em></span><textarea name="description" maxlength="4000" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
+        <div class="flex" style="margin-top:-6px"><button class="btn sm" type="button" id="wdesc">${icon('sparkle')} Write it for me</button><button class="btn sm ghost" type="button" id="tidy">Tidy up spelling &amp; capitals</button></div>
         <label class="fld"><span>Internal notes <em>(team only)</em></span><textarea name="notes" maxlength="4000" style="min-height:80px">${prod.notes || ''}</textarea></label>
         <label class="fld" style="max-width:280px"><span>Low stock warning at <em>(optional)</em></span><input name="low_stock_threshold" value="${prod.low_stock_threshold ?? ''}" inputmode="numeric" placeholder="e.g. 1"></label>
       </form></section>${wizbar(w.prev)}`);
@@ -166,9 +236,35 @@
         $('#typehint', el).textContent = { stocked: 'We track stock, supplier and purchase cost.', one_off: 'A single piece: stock is 1 when bought.', bespoke: 'Made to order for a client; supplier optional.', in_house: 'Made in our workshop; record material costs.', service: 'No stock or supplier needed.' }[t]; };
       f.product_type.onchange = adapt; adapt();
       $('#sug', el).onclick = () => { const c = (f.category.value || 'LK').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase(); f.sku.value = 'LK-' + c + '-' + Math.random().toString(36).slice(2, 6).toUpperCase(); };
+      // spelling check on name + description, with one-tap fixes
+      const checkSpell = () => {
+        const list = [...slips(f.name.value).map(x => ['name', ...x]), ...slips(f.description.value).map(x => ['description', ...x])];
+        S.render($('#spell', el), list.length ? html`<div class="spellbox"><b>Spelling to fix</b>${list.map(([fld, w, r]) => html`<div class="spellrow"><span><s>${w}</s> → <b>${r}</b></span><button type="button" class="btn sm gold" data-fix="${fld}|${w}|${r}">Fix</button></div>`)}
+          ${list.length > 1 ? html`<button type="button" class="btn sm" data-fixall>Fix all</button>` : ''}</div>` : '');
+        return list.length;
+      };
+      f.name.addEventListener('input', checkSpell); f.description.addEventListener('input', checkSpell); checkSpell();
+      S.on(el, '[data-fix]', 'click', (e, b) => { const [fld, w, r] = b.dataset.fix.split('|'); f[fld].value = fixWord(f[fld].value, w, r); checkSpell(); });
+      S.on(el, '[data-fixall]', 'click', () => { ['name', 'description'].forEach(n => slips(f[n].value).forEach(([w, r]) => f[n].value = fixWord(f[n].value, w, r))); checkSpell(); });
+      f.name.addEventListener('blur', () => { if (f.name.value.trim()) f.name.value = titleCase(f.name.value); });
+      $('#tidy', el).onclick = () => { ['name', 'description'].forEach(n => slips(f[n].value).forEach(([w, r]) => f[n].value = fixWord(f[n].value, w, r)));
+        if (f.name.value.trim()) f.name.value = titleCase(f.name.value); if (f.description.value.trim()) f.description.value = tidyText(f.description.value); checkSpell(); S.toast('Tidied up'); };
+      $('#sugn', el).onclick = () => { const ideas = nameIdeas(S.form(f));
+        S.render($('#names', el), html`${ideas.map(n => html`<button type="button" class="chip" data-name="${n}">${n}</button>`)}<button type="button" class="chip" id="more">More ideas ↻</button>`);
+        $('#more', el).onclick = () => $('#sugn', el).click(); };
+      S.on(el, '[data-name]', 'click', (e, b) => { f.name.value = b.dataset.name; S.$$('[data-name]', el).forEach(x => x.classList.toggle('on', x === b)); checkSpell(); });
+      $('#wdesc', el).onclick = async () => { const o = S.form(f);
+        if (f.description.value.trim() && !(await S.confirm({ title: 'Replace the description?', message: 'What is written there now will be replaced.', confirm: 'Replace' }))) return;
+        f.description.value = writeDesc(o); checkSpell(); };
       $('#nextb', el).onclick = e => {
-        S.clearErr(f); const o = S.form(f);
-        if (!o.name) return S.fieldErr(f, 'name', 'Give the product a name');
+        S.clearErr(f);
+        if (f.name.value.trim()) f.name.value = titleCase(f.name.value);
+        if (f.description.value.trim()) f.description.value = tidyText(f.description.value);
+        if (checkSpell()) { S.toast('Fix the spelling first (tap Fix).', { bad: true }); $('#spell', el).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        const o = S.form(f);
+        if (!o.name) return S.fieldErr(f, 'name', 'Give the product a name, or tap Suggest names');
+        if ((o.description || '').trim().length < 20) return S.fieldErr(f, 'description', 'Write at least one full sentence, or tap Write it for me');
+        if (!o.sku) f.sku.value = o.sku = 'LK-' + ((o.category || 'LK').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
         if (o.weight_g && isNaN(+o.weight_g)) return S.fieldErr(f, 'weight_g', 'Weight must be a number');
         if (o.low_stock_threshold && !/^\d+$/.test(o.low_stock_threshold)) return S.fieldErr(f, 'low_stock_threshold', 'Use a whole number');
         const upd = { name: o.name, category: o.category || null, subcategory: o.subcategory || null, product_type: o.product_type, sku: o.sku ? o.sku.toUpperCase() : null,
@@ -257,6 +353,7 @@
           <label class="fld"><span>VAT rate</span><select name="vat_rate" ${w.locked ? 'disabled' : ''}>${S.opts([['20', '20% (standard)'], ['5', '5%'], ['0', '0% / exempt']], String(Math.round(p2.vat_rate)))}</select></label></div></form>
         <div class="card tint flat" style="margin-top:16px;padding:16px"><div class="row-between"><div><div class="tiny" style="letter-spacing:.16em;text-transform:uppercase;color:var(--gold-d)">Suggestion only</div>
           <div id="sugp" class="serif" style="font-size:1.6rem"></div><div class="small muted" id="sugw"></div></div><button class="btn sm" id="usesug" ${w.locked ? 'disabled' : ''}>Use this price</button></div>
+          ${!costs.length && !w.locked ? html`<div class="flex" style="margin-top:12px;align-items:flex-end"><label class="fld" style="max-width:220px;margin:0"><span>What did it cost us? <em>(private)</em></span><div class="money"><input id="qcost" class="inp" inputmode="decimal" placeholder="0.00"></div></label><button class="btn sm gold" type="button" id="qadd">Suggest price</button></div>` : ''}
           <label class="fld" style="margin-top:12px;max-width:220px"><span>Target margin %</span><input id="tm" class="inp" inputmode="decimal" value="${target}"></label></div>
         <p class="small muted" style="margin:14px 0 0">Nothing changes until you press <b>Confirm price</b>. Suggestions never change a price on their own.</p></section>
         <section class="card"><h2>Profit</h2><div id="calc"></div></section></div>
@@ -273,6 +370,10 @@
       };
       f.price.oninput = live; f.vat_rate.onchange = live; $('#tm', el).oninput = live; live();
       $('#usesug', el).onclick = () => { f.price.value = S.pounds(+$('#usesug', el).dataset.v); live(); S.toast('Suggested price filled in. Press Confirm price to keep it.'); };
+      const qa = $('#qadd', el); if (qa) qa.onclick = e => { const a = S.pence($('#qcost', el).value);
+        if (a == null || isNaN(a) || a <= 0) return S.toast('Put in what it cost, e.g. 300', { bad: true });
+        S.act(e.currentTarget, async () => { S.must(await S.db.from('product_costs').insert({ product_id: prod.id, kind: 'purchase', amount_pence: a, basis: 'per_item', description: 'Purchase cost', created_by: S.user.id }));
+          await WIZ.price(el, prod, w); const b = $('#usesug', el); if (b && !b.disabled) b.click(); }, 'Cost saved').catch(() => {}); };
       const sk = $('#skip', el); if (sk) sk.onclick = w.next;
       $('#nextb', el).onclick = e => {
         const pr = S.pence(f.price.value); S.clearErr(f);
@@ -285,12 +386,12 @@
       const [issues, p2] = await Promise.all([S.rpc('product_issues_checked', { p_id: prod.id }), S.db.from('products').select('*').eq('id', prod.id).single().then(S.must)]);
       const canSubmit = ['draft', 'changes_requested', 'rejected'].includes(p2.status);
       S.render(el, html`<section class="card"><h2>Ready for review?</h2>
-        ${issues.blocking.length ? S.banner('bad', 'Still needed before the owner can approve', html`<ul>${issues.blocking.map(x => html`<li>${x}</li>`)}</ul>`) : S.banner('good', 'Everything required is here', 'The owner can review and approve this product.')}
+        ${issues.blocking.length ? S.banner('bad', 'Still needed before the admin can approve', html`<ul>${issues.blocking.map(x => html`<li>${x}</li>`)}</ul>`) : S.banner('good', 'Everything required is here', 'The admin can review and approve this product.')}
         ${issues.warnings.length ? S.banner('warn', 'Worth checking', html`<ul>${issues.warnings.map(x => html`<li>${x}</li>`)}</ul>`) : ''}
-        <p class="muted">${canSubmit ? 'When you submit, the owner is notified and will approve, request changes, or publish it to the website.' : 'Current status: ' + S.statusLabel('product', p2.status) + '.'}</p></section>
+        <p class="muted">${canSubmit ? 'When you submit, the admin is notified and will approve, request changes, or publish it to the website.' : 'Current status: ' + S.statusLabel('product', p2.status) + '.'}</p></section>
         <div class="wizbar"><a class="btn" href="${w.prev}">${icon('back')} Back</a>
-          ${canSubmit ? html`<button class="btn gold" id="submit" ${issues.blocking.length ? 'disabled' : ''}>${icon('send')} Submit for owner review</button>` : S.isOwner() && ['ready_for_review', 'owner_review'].includes(p2.status) ? html`<a class="btn gold" href="#/products/${p2.id}/review">Open owner review</a>` : html`<a class="btn gold" href="#/products/${p2.id}">Done</a>`}</div>`);
-      const sb = $('#submit', el); if (sb) sb.onclick = () => S.act(sb, async () => { await S.rpc('product_submit', { p_id: prod.id }); S.go('#/products/' + prod.id); }, 'Submitted for owner review').catch(() => {});
+          ${canSubmit ? html`<button class="btn gold" id="submit" ${issues.blocking.length ? 'disabled' : ''}>${icon('send')} Submit for admin review</button>` : S.isOwner() && ['ready_for_review', 'owner_review'].includes(p2.status) ? html`<a class="btn gold" href="#/products/${p2.id}/review">Open admin review</a>` : html`<a class="btn gold" href="#/products/${p2.id}">Done</a>`}</div>`);
+      const sb = $('#submit', el); if (sb) sb.onclick = () => S.act(sb, async () => { await S.rpc('product_submit', { p_id: prod.id }); S.go('#/products/' + prod.id); }, 'Submitted for admin review').catch(() => {});
     }
   };
 
@@ -320,7 +421,7 @@
     S.render(v, html`<header class="ph"><div><div class="crumb"><a href="#/products">${icon('back')} Products</a></div><h1>${prod.name || 'Untitled product'}</h1>
       <div class="sub flex">${prod.sku || 'No SKU'} ${pill('product', st)}</div></div><div class="acts">${acts}</div></header>
       ${prod.publish_status === 'failed' && st !== 'published' ? S.banner('bad', 'Publishing failed', html`${prod.publish_error || 'Unknown reason'}. The product is safe and was not changed on the website.${owner ? raw(' <button class="linkbtn" id="retrypub">Retry publishing</button>') : ''}`) : ''}
-      ${st === 'changes_requested' && lastChange ? S.banner('warn', 'Changes requested by the owner', html`<p class="pre" style="margin:4px 0 0">${lastChange.note}</p><span class="tiny">${dateTime(lastChange.created_at)}</span>`) : ''}
+      ${st === 'changes_requested' && lastChange ? S.banner('warn', 'Changes requested by the admin', html`<p class="pre" style="margin:4px 0 0">${lastChange.note}</p><span class="tiny">${dateTime(lastChange.created_at)}</span>`) : ''}
       ${st === 'published' ? S.banner('good', 'Live on the website', html`Published ${dateTime(prod.published_at)}. <a href="${webUrl}" target="_blank" rel="noopener">Open the product page</a>`) : ''}
       <div class="split"><div class="stack">
         <section class="card">${imgs.length ? html`<div class="gallery"><img src="${S.publicImg((imgs.find(x => x.is_primary) || imgs[0]).path)}" alt="${prod.name}"><div class="rest">${imgs.filter(x => !x.is_primary).slice(0, 4).map(x => html`<img src="${S.publicImg(x.path)}" alt="" loading="lazy">`)}</div></div>`
@@ -367,7 +468,7 @@
 
   // =========================== OWNER REVIEW ===========================
   S.route('/products/:id/review', async (v, p, live) => {
-    if (!S.isOwner()) return S.render(v, S.empty({ icon: 'lock', title: 'Owner review', text: 'Only the owner can review products.' }));
+    if (!S.isOwner()) return S.render(v, S.empty({ icon: 'lock', title: 'Admin review', text: 'Only the admin can review products.' }));
     let prod = S.must(await S.db.from('products').select('*').eq('id', p.id).maybeSingle());
     if (!prod) return S.render(v, S.empty({ icon: 'gem', title: 'Product not found' }));
     if (prod.status === 'ready_for_review') { await S.rpc('product_start_review', { p_id: p.id }).catch(() => {}); prod.status = 'owner_review'; }
@@ -399,7 +500,7 @@
     if (innerWidth <= 820) Object.assign($('#rbar', v).style, { left: '0', bottom: 'calc(var(--bottom) + env(safe-area-inset-bottom))', padding: '10px 12px' });
     S.on(v, '[data-a]', 'click', async (e, b) => {
       const a = b.dataset.a; let note = null;
-      if (a === 'request_changes') { note = await S.ask({ title: 'Request changes', label: 'What needs changing? Your partner will see this note on the product.', confirm: 'Send back' }); if (note === null) return; }
+      if (a === 'request_changes') { note = await S.ask({ title: 'Request changes', label: 'What needs changing? Jack will see this note on the product.', confirm: 'Send back' }); if (note === null) return; }
       if (a === 'reject') { note = await S.ask({ title: 'Reject product', label: 'Reason', confirm: 'Reject' }); if (note === null) return; }
       if (a === 'approve_publish' && !(await S.confirm({ title: 'Approve and publish?', message: 'The product will appear on the website straight away.', confirm: 'Approve & publish' }))) return;
       try {

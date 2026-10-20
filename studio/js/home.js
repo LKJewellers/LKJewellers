@@ -23,7 +23,7 @@
     if (d.failed_enquiries) alerts.push(['bad', `${d.failed_enquiries} enquir${d.failed_enquiries === 1 ? 'y' : 'ies'} could not be processed`, 'They are safely stored. Open them to retry.', '#/leads?view=inbox']);
     if (d.publish_failures) alerts.push(['bad', `Publishing failed for ${d.publish_failures} product${d.publish_failures === 1 ? '' : 's'}`, 'The products are safe and can be retried.', '#/products?status=publish_failed']);
     if (S.isOwner() && d.awaiting_approval) alerts.push(['warn', `${d.awaiting_approval} product${d.awaiting_approval === 1 ? '' : 's'} waiting for your review`, '', '#/products?status=review']);
-    if (!S.isOwner() && d.changes_requested) alerts.push(['warn', `${d.changes_requested} product${d.changes_requested === 1 ? '' : 's'} need changes`, 'The owner has left comments.', '#/products?status=changes_requested']);
+    if (!S.isOwner() && d.changes_requested) alerts.push(['warn', `${d.changes_requested} product${d.changes_requested === 1 ? '' : 's'} need changes`, 'The admin has left comments.', '#/products?status=changes_requested']);
     if (d.overdue_tasks) alerts.push(['warn', `${d.overdue_tasks} overdue task${d.overdue_tasks === 1 ? '' : 's'}`, '', '#/tasks?view=overdue']);
     if (m && m.invoices.overdue_count) alerts.push(['bad', `${m.invoices.overdue_count} overdue invoice${m.invoices.overdue_count === 1 ? '' : 's'} (${money(m.invoices.overdue_pence)})`, '', '#/invoices?status=overdue']);
     S.render(v, html`
@@ -40,7 +40,7 @@
         : html`
           <a class="stat" href="#/leads"><div class="k">New enquiries</div><div class="v">${d.new_enquiries}</div><div class="s">Waiting for a first reply</div></a>
           <a class="stat" href="#/orders"><div class="k">Open orders</div><div class="v">${d.open_orders}</div><div class="s">Confirmed or in progress</div></a>
-          <a class="stat" href="#/products?status=review"><div class="k">Awaiting approval</div><div class="v">${d.awaiting_approval}</div><div class="s">Products with the owner</div></a>
+          <a class="stat" href="#/products?status=review"><div class="k">Awaiting approval</div><div class="v">${d.awaiting_approval}</div><div class="s">Products with the admin</div></a>
           <a class="stat" href="#/tasks"><div class="k">Follow-ups due</div><div class="v">${d.follow_ups.length}</div><div class="s">${d.overdue_tasks} overdue</div></a>`}
       </div>
       <div class="split">
@@ -59,7 +59,7 @@
           <section class="card"><div class="ch"><h2>Targets</h2><a class="btn sm" href="#/kpis">KPIs</a></div>
             ${d.kpis.length ? html`<div class="stack">${d.kpis.slice(0, 4).map(k => { const st = S.kpiStatus(k.status); return html`<div class="kpi">${S.ring(k.restricted ? null : k.pct, k.status)}<div class="grow"><div class="n">${k.name}</div>
               <div class="v">${S.kpiValue(k)}</div><div class="tiny muted">Target ${k.restricted ? '—' : S.kpiTarget(k)} · ${S.label(k.period)}</div></div>${k.restricted ? '' : html`<span class="pill ${st[1]}">${st[0]}</span>`}</div>`; })}</div>`
-              : S.empty({ icon: 'target', title: 'No targets yet', text: S.isOwner() ? 'Set monthly targets for revenue, enquiries and more.' : 'The owner has not set any targets yet.', action: S.isOwner() ? html`<a class="btn" href="#/kpis">Set targets</a>` : '' })}</section>
+              : S.empty({ icon: 'target', title: 'No targets yet', text: S.isOwner() ? 'Set monthly targets for revenue, enquiries and more.' : 'The admin has not set any targets yet.', action: S.isOwner() ? html`<a class="btn" href="#/kpis">Set targets</a>` : '' })}</section>
           ${f ? html`<section class="card"><div class="ch"><h2>Recent payments</h2><a class="btn sm" href="#/payments">All</a></div>
             ${f.recent_payments.length ? html`<div class="list">${f.recent_payments.map(pm => html`<div class="li"><span class="ic">${icon('card')}</span><span class="main-t"><span class="t" style="display:block">${pm.customer || 'Customer'}</span>
               <span class="d" style="display:block">${S.label(pm.method)} · ${ago(pm.received_at)}</span></span><span class="end"><span class="amt">${money(pm.amount_pence)}</span>
@@ -114,7 +114,7 @@
   S.route('/more', v => {
     S.render(v, html`${S.page({ title: 'More' })}<div class="more-grid">${S.navItems().filter(n => n[0] && !['customers', 'products', 'orders'].includes(n[0])).map(n => html`<a href="#/${n[0]}">${icon(n[2])}${n[1]}</a>`)}
       <a href="#/notifications">${icon('bell')}Notifications</a><a href="../index.html" target="_blank" rel="noopener">${icon('external')}Website</a></div>
-      <div class="card flat" style="margin-top:18px"><div class="row-between"><div class="flex"><span class="avatar">${S.initials(S.me.full_name)}</span><div><div>${S.me.full_name}</div><div class="tiny muted">${S.me.email} · ${S.me.role === 'owner' ? 'Owner' : 'Team'}</div></div></div>
+      <div class="card flat" style="margin-top:18px"><div class="row-between"><div class="flex"><span class="avatar">${S.initials(S.me.full_name)}</span><div><div>${S.me.full_name}</div><div class="tiny muted">${S.me.email} · ${S.me.role === 'owner' ? 'Admin' : 'Team'}</div></div></div>
       <button class="btn sm" id="so2">${icon('logout')} Sign out</button></div></div>`);
     $('#so2', v).onclick = () => $('#signout').click();
   });

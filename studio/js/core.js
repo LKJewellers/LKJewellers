@@ -91,7 +91,7 @@
 
   // Status vocabularies: label + colour, so every screen speaks the same language.
   const ST = {
-    product: { draft: ['Draft', 'grey'], ready_for_review: ['Ready for review', 'amber'], owner_review: ['Owner review', 'violet'], changes_requested: ['Changes requested', 'red'],
+    product: { draft: ['Draft', 'grey'], ready_for_review: ['Ready for review', 'amber'], owner_review: ['Admin review', 'violet'], changes_requested: ['Changes requested', 'red'],
       rejected: ['Rejected', 'red'], approved: ['Approved', 'blue'], published: ['Published', 'green'], unpublished: ['Unpublished', 'grey'], archived: ['Archived', 'grey'] },
     lead: { new: ['New', 'amber'], contact_required: ['Contact required', 'red'], contacted: ['Contacted', 'blue'], discussion: ['Discussion', 'violet'],
       quote_sent: ['Quote sent', 'blue'], awaiting_customer: ['Awaiting customer', 'amber'], won: ['Won', 'green'], lost: ['Lost', 'grey'] },
@@ -272,8 +272,8 @@
     S.$$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === sect || (!!a.dataset.alt && !!sect && a.dataset.alt.split(',').includes(sect))));
     window.scrollTo(0, 0);
     if (!r) { S.render(view, S.empty({ icon: 'search', title: 'Page not found', action: S.html`<a class="btn" href="#/">Go home</a>` })); return; }
-    if (r.opts.owner && !S.isOwner()) { S.render(view, S.empty({ icon: 'lock', title: 'Owner only', text: 'This area is only available to the owner.' })); return; }
-    if (r.opts.finance && !S.canFinance()) { S.render(view, S.empty({ icon: 'lock', title: 'No finance access', text: 'Ask the owner to give you access to financial information.' })); return; }
+    if (r.opts.owner && !S.isOwner()) { S.render(view, S.empty({ icon: 'lock', title: 'Admin only', text: 'This area is only available to the admin.' })); return; }
+    if (r.opts.finance && !S.canFinance()) { S.render(view, S.empty({ icon: 'lock', title: 'No finance access', text: 'Ask the admin to give you access to financial information.' })); return; }
     const m = path.match(r.re); const p = {}; r.keys.forEach((k, i) => p[k] = decodeURIComponent(m[i + 1]));
     const my = ++navToken;
     S.render(view, S.loading());
@@ -302,7 +302,7 @@
       <aside class="side"><div class="brand"><a class="mark" href="#/"><b>LK <span>Jewellers</span></b><small>London</small><i>Studio</i></a></div>
         <nav aria-label="Main">${NAV.map(n => n[0] === 'grp' ? S.html`<div class="grp">${n[1]}</div>` : (n[3] === 'finance' && !S.canFinance()) ? '' :
           S.html`<a href="#/${n[0]}" data-nav="${n[0]}">${S.icon(n[2])}<span>${n[1]}</span>${n[0] === 'leads' ? S.raw('<b class="count" id="leadcount" hidden></b>') : n[0] === 'products' ? S.raw('<b class="count" id="revcount" hidden></b>') : ''}</a>`)}</nav>
-        <div class="me"><span class="avatar">${S.initials(S.me.full_name)}</span><div class="grow"><div>${S.me.full_name || S.me.email}</div><div class="tiny muted">${S.me.role === 'owner' ? 'Owner' : 'Team'}</div></div>
+        <div class="me"><span class="avatar">${S.initials(S.me.full_name)}</span><div class="grow"><div>${S.me.full_name || S.me.email}</div><div class="tiny muted">${S.me.role === 'owner' ? 'Admin' : 'Team'}</div></div>
           <button class="iconbtn" id="signout" title="Sign out" aria-label="Sign out">${S.icon('logout')}</button></div></aside>
       <div class="main">
         <div class="top" id="top"><a class="mark mobile-brand" href="#/"><b>LK <span>Studio</span></b><small>London</small></a>
@@ -358,7 +358,7 @@
       const btn = S.$('button[type=submit]', f);
       const r = await S.busy(btn, () => S.db.auth.signInWithPassword({ email: v.email.toLowerCase(), password: v.password }));
       if (r.error) return loginScreen({ title: /banned/i.test(r.error.message) ? 'Access switched off' : 'Could not sign in',
-        body: /banned/i.test(r.error.message) ? 'Your access to LK Studio has been switched off. Please speak to the owner.' : /confirm/i.test(r.error.message) ? 'Please use the link in your invitation email first.' : 'Check your email and password and try again.' });
+        body: /banned/i.test(r.error.message) ? 'Your access to LK Studio has been switched off. Please speak to the admin.' : /confirm/i.test(r.error.message) ? 'Please use the link in your invitation email first.' : 'Check your email and password and try again.' });
       boot();
     };
     S.$('#forgot').onclick = () => forgotScreen();
@@ -403,7 +403,7 @@
       return;
     }
     const { data: { session } } = await S.db.auth.getSession();
-    if (S.db.auth.urlError && !session) return loginScreen({ title: 'That link has expired', body: 'Links can only be used once and expire after a while. Request a new one below or ask the owner to resend your invitation.' });
+    if (S.db.auth.urlError && !session) return loginScreen({ title: 'That link has expired', body: 'Links can only be used once and expire after a while. Request a new one below or ask the admin to resend your invitation.' });
     if (!session) return loginScreen();
     if (S.db.auth.linkType === 'invite' || S.db.auth.linkType === 'recovery') { const t = S.db.auth.linkType; S.db.auth.linkType = null; return setPasswordScreen(t === 'invite'); }
     const r = await S.db.from('staff').select('*').eq('user_id', session.user.id).eq('active', true).maybeSingle();
