@@ -1,0 +1,70 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jewellery | LK Jewellers London</title><meta name="description" content="A piece from LK Jewellers, fine jewellers in London.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/portal.css"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
+<style id="nav-fit">nav a,.logo{white-space:nowrap}@media(min-width:901px) and (max-width:1240px){nav ul{gap:22px}nav a{letter-spacing:.16em}}@media(min-width:901px) and (max-width:1060px){nav ul{gap:15px}nav a{font-size:.7rem;letter-spacing:.12em}header .logo{font-size:1.35rem;letter-spacing:.14em}}#mainimg{width:100%;height:auto;aspect-ratio:1;object-fit:contain}</style><style id="lk-white">
+/* v1.7: pure white site background so it matches the white product photos */
+:root{--bg:#fff;--surface:#fff;--blush:#fff;--sage:#fff;--pearl:#fff}
+html,body,main,main.pg{background:#fff}
+header.solid{background:rgba(255,255,255,.96)}
+nav{background:transparent}
+.hero,.show,.pd,.cta,footer{background:#fff}
+.hero-img::before,.stage::before{background:#fff;box-shadow:none}
+.coll,.frame,.pd-gal .gal-main,.thumbs button,.art,.item img,#mainimg{background:#fff}
+.alt{border-block:1px solid var(--line)}
+.trust{border-block:1px solid var(--line)}
+/* plain (text-only) page heroes: no product photo */
+.hero.plain{padding:140px 0 24px}
+.hero.plain .hero-grid{grid-template-columns:1fr;text-align:center;justify-items:center}
+.hero.plain .orn,.hero.plain p{margin-left:auto;margin-right:auto}
+.show-grid.plain{grid-template-columns:1fr;text-align:center;justify-items:center}
+.show-grid.plain .orn,.show-grid.plain p.lead{margin-left:auto;margin-right:auto}
+.show-grid.plain .btns{justify-content:center}
+.split{grid-template-columns:1fr;max-width:760px;margin-inline:auto}
+/* category chips */
+.cats{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:0 0 48px}
+.cats a{font:400 .7rem var(--sans);letter-spacing:.18em;text-transform:uppercase;padding:10px 18px;border:1px solid var(--line);color:var(--text);background:#fff;transition:border-color var(--ease),color var(--ease)}
+.cats a:hover,.cats a[aria-current]{border-color:var(--gold);color:var(--gold-d)}
+.cats a[aria-current]{font-weight:500}
+.cat-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.cat-tiles a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:150px;padding:28px 20px;border:1px solid var(--line);background:#fff;text-align:center;transition:border-color var(--ease),box-shadow var(--ease),transform var(--ease)}
+.cat-tiles a:hover{border-color:rgba(194,161,103,.7);box-shadow:var(--shadow);transform:translateY(-3px)}
+.cat-tiles h3{font-size:1.7rem}
+.cat-tiles span{font:500 .68rem var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--gold-d);border-bottom:1px solid var(--gold);padding-bottom:3px}
+.empty-msg{margin:24px auto 0;padding:40px 0}
+.empty-msg a{text-decoration:underline;text-decoration-color:var(--gold)}
+/* Shop dropdown in the main menu */
+nav .has-sub{position:relative}
+nav .dn{font-size:.7em;margin-left:2px}
+nav .has-sub.on>a{color:var(--gold-d)}
+@media(min-width:901px){
+nav .sub{display:none;flex-direction:column;gap:0;position:absolute;top:100%;left:-22px;min-width:250px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:10px 0;z-index:60}
+nav .has-sub:hover>.sub,nav .has-sub:focus-within>.sub{display:flex}
+nav .sub a{display:block;padding:10px 24px;white-space:nowrap;letter-spacing:.16em}
+nav .sub a::after{display:none}
+}
+@media(max-width:900px){
+nav{background:#fff}
+nav .sub{display:flex;flex-direction:column;padding-left:18px}
+nav .sub a{padding:13px 0;font-size:.72rem;color:var(--muted)}
+nav .dn{display:none}
+.cat-tiles{grid-template-columns:1fr 1fr}
+.hero.plain{padding:116px 0 16px}
+}
+@media(max-width:560px){.cat-tiles{grid-template-columns:1fr}.cats{gap:8px}.cats a{padding:9px 14px}}
+</style>
+</head>
+<body data-page="item"><header><div class="wrap bar">
+<a class="logo" href="index.html">LK <span>Jewellers</span><small class="lt">London</small></a>
+<nav id="menu" aria-label="Main"><ul><li><a href="index.html">Home</a></li><li><a href="latest.html">Just In</a></li><li class="has-sub"><a href="jewellery.html">Shop <span class="dn" aria-hidden="true">&#9662;</span></a><ul class="sub"><li><a href="jewellery.html">All jewellery</a></li><li><a href="engagements.html">Engagement rings</a></li><li><a href="wedding-bands.html">Wedding bands</a></li><li><a href="rings.html">Rings</a></li><li><a href="earrings.html">Earrings</a></li><li><a href="necklaces.html">Necklaces</a></li><li><a href="pendants.html">Pendants</a></li><li><a href="bracelets.html">Bracelets</a></li><li><a href="bespoke.html">Bespoke</a></li><li><a href="gifts.html">Gifts</a></li></ul></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul></nav>
+<button class="menu-btn" aria-expanded="false" aria-controls="menu">Menu</button>
+</div></header>
+<main class="pg"><div class="wrap"><div id="app"></div></div></main><footer><div class="wrap"><div class="foot">
+<div><a class="logo" href="index.html">LK <span>Jewellers</span><small class="lt">London</small></a><p style="margin-top:16px" data-content="home_footer_line">Independent fine jeweller. Handcrafted, hand-finished and cared for for life.</p></div>
+<div><p class="fh">Shop</p><ul><li><a href="jewellery.html">All jewellery</a></li><li><a href="engagements.html">Engagement rings</a></li><li><a href="wedding-bands.html">Wedding bands</a></li><li><a href="rings.html">Rings</a></li><li><a href="earrings.html">Earrings</a></li><li><a href="necklaces.html">Necklaces</a></li><li><a href="pendants.html">Pendants</a></li><li><a href="bracelets.html">Bracelets</a></li><li><a href="bespoke.html">Bespoke</a></li><li><a href="gifts.html">Gifts</a></li><li><a href="latest.html">Just In</a></li></ul></div>
+<div><p class="fh">Studio</p><ul><li><a href="about.html">About us</a></li><li><a href="contact.html">Contact</a></li><li><a href="account/index.html">My account</a></li><li><a href="https://instagram.com/lkjewellers" rel="noopener">Instagram</a></li></ul></div>
+<div><p class="fh">Stay in touch</p><p>New pieces and studio news, sent sparingly.</p>
+<!-- Newsletter: create a free form at formspree.io and replace YOUR_NEWSLETTER_ID -->
+<form class="sub-form" action="https://formspree.io/f/YOUR_NEWSLETTER_ID" method="POST"><input type="email" name="email" placeholder="Your email" aria-label="Email address" required><button class="btn solid" type="submit">Join</button></form></div>
+</div>
+<p class="copy">&copy; <span id="year"></span> LK Jewellers. All rights reserved. lkjewellers.co.uk</p></div></footer><script src="js/config.js"></script><script src="js/lk-db.js"></script><script src="js/lk.js"></script><script src="js/main.js"></script><script src="js/shop-dynamic.js"></script></body></html>
