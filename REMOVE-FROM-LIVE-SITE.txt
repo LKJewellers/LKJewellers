@@ -1,26 +1,2 @@
-These product-*.html files in the zip are now tiny redirects to jewellery.html, so uploading the zip overwrites the old product pages. You can delete them later.
-
-product-angel-wing-pendant.html
-product-baguette-cuban-link.html
-product-diamond-bar-bangle.html
-product-dreamcatcher-key-pendant.html
-product-emerald-channel-ring.html
-product-floral-filigree-ring.html
-product-iced-cuban-link.html
-product-oval-halo-pendant.html
-product-paw-print-set.html
-product-pear-accent-tennis-bracelet.html
-product-pink-cushion-double-halo.html
-product-princess-eternity-bracelet.html
-product-puzzle-heart-pendants.html
-product-round-halo.html
-product-round-pave-solitaire.html
-product-round-tennis-bracelet.html
-product-three-stone-round.html
-product-trilogy-pave.html
-product-triple-twist-pendant.html
-product-twist-solitaire.html
-product-twisted-split-shank.html
-
-Also delete their photos: images/<name>-1.webp ... and thumbs/<name>-1.webp ...
-where <name> is the part after 'product-' and before '.html' in each file above.
+The product-*.html files are now small redirects to jewellery.html (53 files). Delete them whenever you like.
+The old images/ and thumbs/ folders are no longer used by any page and are not included.
