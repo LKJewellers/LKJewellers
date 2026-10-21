@@ -422,3 +422,18 @@ button.li{width:100%;border-left:0;border-right:0;border-bottom:0;background:non
 
 .btn.autosw b{margin-left:4px}
 .btn.autosw.on{background:var(--sage,#e6f2ec);border-color:var(--sage-d,#2f7d5b);color:var(--sage-d,#2f7d5b)}
+/* v2.3: required marks, select mode, progress bar, idle clock */
+.req{color:var(--rose-d,#a8423a);font-style:normal;font-weight:600}
+.selbar{position:sticky;top:8px;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.selbar #selc{font-weight:600;margin-right:auto}
+.li.selrow{cursor:pointer}.li.selrow input{width:22px;height:22px;flex:none;accent-color:var(--gold-d)}
+.li.selrow.on{background:var(--gold-ll,#f5eedf)}
+.pbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:6px 0 10px}.pbar i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
+.idleclock{position:fixed;top:10px;right:12px;z-index:90;background:#1e2327;color:#fff;border-radius:999px;padding:7px 14px;font:600 .82rem var(--sans);letter-spacing:.02em;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none}
+.idleclock b{font-variant-numeric:tabular-nums}
+.idlepop{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(30,35,39,.55);padding:20px}
+.idlepop .box{background:#fff;border-radius:18px;max-width:460px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.idlepop .em{font-size:2.6rem;line-height:1}.idlepop h2{margin:10px 0 6px;font-size:1.35rem}
+.idlepop .clk{font:600 2.2rem var(--sans);font-variant-numeric:tabular-nums;margin:8px 0 14px;color:var(--rose-d,#a8423a)}
+.teamact .li .amt{font-variant-numeric:tabular-nums}
+.fld em.req{color:var(--rose-d,#a8423a)!important;font-style:normal}

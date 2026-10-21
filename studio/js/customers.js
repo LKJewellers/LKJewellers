@@ -138,7 +138,7 @@
             ${acc !== 'disabled' && acc !== 'none' ? html`<button class="btn danger" data-acc="disable">Disable account</button>` : ''}
             ${acc === 'disabled' ? html`<button class="btn" data-acc="reactivate">Reactivate account</button>` : ''}</div>
           ${!c.email ? S.banner('warn', 'No email address', 'Add an email address to send a signup link.') : ''}</section>
-        ${S.isOwner() ? html`<section class="card flat"><div class="ch"><div><h3>Archive customer</h3><p class="muted small">Hides the record. Orders, invoices and payments are kept.</p></div><button class="btn danger sm" id="archive">Archive</button></div></section>` : ''}
+        ${S.isOwner() ? html`<section class="card flat"><div class="ch"><div><h3>Delete customer</h3><p class="muted small">Removes this customer from your lists and search${c.auth_user_id ? ' and blocks their website account' : ''}. Orders, invoices and payments are kept for your records.</p></div><button class="btn danger sm" id="archive">${icon('trash')} Delete</button></div></section>` : ''}
       </div></div>`);
       $('#edit', t).onclick = () => editCustomer(c);
       S.on(t, '[data-acc]', 'click', async (e, b) => {
@@ -151,8 +151,8 @@
         try { await S.act(b, () => S.worker('/customers/' + a, { customer_id: c.id }), { 'signup-link': 'Signup link sent', 'password-reset': 'Password reset link sent', disable: 'Account disabled', reactivate: 'Account reactivated' }[a]); S.dispatch(); } catch (er) { /* shown */ }
       });
       const ar = $('#archive', t); if (ar) ar.onclick = async () => {
-        if (!(await S.confirm({ title: 'Archive ' + S.name(c) + '?', message: 'The customer will be hidden from lists and search. Their orders, invoices and payments stay in your records.', confirm: 'Archive', danger: true, typed: 'ARCHIVE' }))) return;
-        try { await S.act(ar, async () => S.must(await S.db.from('customers').update({ deleted_at: new Date().toISOString() }).eq('id', c.id)), 'Customer archived'); S.go('#/customers'); } catch (er) { }
+        if (!(await S.confirm({ title: 'Delete ' + S.name(c) + '?', message: 'The customer will be removed from your lists and search' + (c.auth_user_id ? ', and their website account will be blocked' : '') + '. Their orders, invoices and payments stay in your records.', confirm: 'Delete', danger: true, typed: 'DELETE' }))) return;
+        try { await S.act(ar, async () => { S.must(await S.db.from('customers').update({ deleted_at: new Date().toISOString(), account_status: c.auth_user_id ? 'disabled' : c.account_status }).eq('id', c.id)); if (c.auth_user_id && S.workerUrl) await S.worker('/customers/disable', { customer_id: c.id }).catch(() => {}); }, 'Customer deleted'); S.go('#/customers'); } catch (er) { }
       };
     },
     async activity(t, c) {

@@ -12,6 +12,7 @@
   S.workerUrl = real(C.WORKER_URL) ? C.WORKER_URL.replace(/\/$/, '') : null;
   S.siteUrl = (real(C.SITE_URL) ? C.SITE_URL : location.origin + location.pathname.replace(/\/studio\/.*$/, '')).replace(/\/$/, '');
   S.db = S.configured ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
+  S.supabaseUrl = String(C.SUPABASE_URL || "").replace(/\/$/, "");
 
   // ---------------- templating (every value is escaped unless wrapped in S.raw) ----------------
   const RAW = '__raw';
@@ -265,6 +266,14 @@
   let navToken = 0;
   S.dispatch = async () => {
     const full = location.hash.slice(1) || '/'; const path = full.split('?')[0];
+    // a screen can ask to confirm before the user leaves it (e.g. an unsubmitted product)
+    if (S._skipNav) { S._skipNav = false; return; }
+    if (S.navGuard && S._curHash !== undefined && location.hash !== S._curHash) {
+      const back = S._curHash; let ok = true;
+      try { ok = await S.navGuard(full); } catch (e) { ok = true; }
+      if (!ok) { if (location.hash !== back) { S._skipNav = true; location.hash = back; } return; }
+    }
+    S._curHash = location.hash;
     const old = S.$('#view'); if (!old) return;
     const view = old.cloneNode(false); old.replaceWith(view);      // fresh element: no handlers left over from the previous screen
     const r = S.routes.find(x => x.re.test(path));
@@ -324,6 +333,7 @@
     document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement.tagName) && !S.$('.veil')) { e.preventDefault(); S.openSearch(); } });
     addEventListener('scroll', () => S.$('#top').classList.toggle('scrolled', scrollY > 4), { passive: true });
     addEventListener('hashchange', S.dispatch);
+    addEventListener('beforeunload', e => { if (S.navGuard && S._draftOpen) { e.preventDefault(); e.returnValue = ''; } });
     S.refreshBadges(); setInterval(() => { if (!document.hidden) S.refreshBadges(); }, 60000);
     S.dispatch();
   }

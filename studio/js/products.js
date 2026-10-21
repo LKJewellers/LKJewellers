@@ -64,19 +64,34 @@
   const NOUN = { 'Engagement rings': 'Engagement Ring', 'Wedding bands': 'Band', 'Rings': 'Ring', 'Earrings': 'Earrings', 'Necklaces': 'Necklace', 'Pendants': 'Pendant', 'Bracelets': 'Bracelet' };
   const AREAS = ['Mayfair', 'Belgravia', 'Kensington', 'Chelsea', 'Knightsbridge', 'Marylebone', 'Hampstead', 'Richmond', 'Notting Hill', 'Holland Park', 'Bloomsbury', 'Covent Garden', 'Primrose', 'Greenwich', 'Highgate', 'Southbank', 'Regent', 'Savoy', 'Westminster', 'Pimlico'];
   const pickWord = (txt, list) => { const t = String(txt || '').toLowerCase(); return list.find(w => t.includes(w.toLowerCase())) || ''; };
-  const nameIdeas = o => {
+  // the piece's own name (e.g. "Saffron" in "The Saffron Angel Wing Pendant"); type words don't count
+  const TYPEWORDS = new Set(('the a an and of with in ring rings engagement wedding band bands pendant pendants necklace necklaces earring earrings stud studs hoop hoops bracelet bracelets bangle chain cuban link tennis ' +
+    'solitaire halo trilogy three stone three-stone eternity bypass crossover split shank cluster twist pave pavé channel cathedral oval round pear princess cushion emerald marquise radiant heart baguette asscher ' +
+    'diamond diamonds sapphire ruby moissanite pearl lab grown lab-grown gold white yellow rose platinum silver sterling 18ct 9ct 14ct set pair angel wing key cross charm drop huggie ' +
+    'puzzle filigree floral flower twisted double row petite classic iced square open entwined sliding bar infinity crown wave elongated hidden raised tapered knife edge vintage art deco illusion fancy signet accent paw print').split(/\s+/));
+  const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const nameKey = n => { const w = fold(n).split(' ').filter(x => x && !TYPEWORDS.has(x)); return w.length ? w.join(' ') : ''; };
+  const lev = (a, b) => { if (Math.abs(a.length - b.length) > 2) return 9; const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+  const nameClash = (name, others) => {
+    const full = fold(name), key = nameKey(name); if (!full) return null;
+    const kw = key.split(' ').filter(x => x.length >= 3);
+    for (const o of others) { if (fold(o.name) === full) return { block: true, other: o }; }
+    for (const o of others) { const ok = nameKey(o.name).split(' ').filter(x => x.length >= 3); if (kw.some(w => ok.includes(w))) return { block: true, other: o }; }
+    for (const o of others) { const ok = nameKey(o.name).split(' ').filter(x => x.length >= 4); if (kw.some(w => w.length >= 4 && ok.some(x => lev(w, x) <= 1 || (x.length >= 5 && w.length >= 5 && (x.startsWith(w.slice(0, 5)))) ))) return { block: false, other: o }; }
+    return null;
+  };
+  const GIVEN = ['Aurelia', 'Seraphina', 'Celeste', 'Valentina', 'Isolde', 'Éloise', 'Solenne', 'Rosalind', 'Ottilie', 'Margaux', 'Liliana', 'Ophelia', 'Clementine', 'Juliette', 'Genevieve',
+    'Arabella', 'Imogen', 'Delphine', 'Florence', 'Beatrice', 'Cordelia', 'Evangeline', 'Marguerite', 'Penelope', 'Rosalie', 'Sabine', 'Theodora', 'Vivienne', 'Wilhelmina', 'Adeline',
+    'Camellia', 'Magnolia', 'Jasmine', 'Lavender', 'Bluebell', 'Marigold', 'Wisteria', 'Peony', 'Dahlia', 'Iris', 'Violet', 'Hazel', 'Ivy', 'Willow', 'Juniper', 'Azalea', 'Clover',
+    'Amara', 'Elodie', 'Esmé', 'Fleur', 'Inès', 'Léonie', 'Mirabel', 'Noémie', 'Odette', 'Perrine', 'Romilly', 'Séverine', 'Talia', 'Elowen', 'Lucienne', 'Anouk', 'Coralie'];
+  const nameIdeas = (o, used = new Set()) => {
     const noun = NOUN[o.category] || 'Piece';
-    const stone = pickWord(o.gemstone, ['Diamond', 'Sapphire', 'Emerald', 'Ruby', 'Moissanite', 'Pearl']);
     const shape = pickWord(o.gemstone + ' ' + o.subcategory, ['Emerald cut', 'Round', 'Oval', 'Pear', 'Princess', 'Cushion', 'Marquise', 'Radiant', 'Heart', 'Baguette']);
-    const style = pickWord(o.subcategory + ' ' + o.name, ['Solitaire', 'Halo', 'Trilogy', 'Three Stone', 'Eternity', 'Tennis', 'Cuban', 'Hoop', 'Stud', 'Cluster', 'Twist']);
-    const metal = pickWord(o.metal, ['Yellow Gold', 'White Gold', 'Rose Gold', 'Platinum', 'Silver']);
-    const core = [shape, stone, style].filter(Boolean).map(titleCase).join(' ');
-    const out = new Set();
-    if (core) out.add(titleCase(`${core} ${noun}`));
-    if (core && metal) out.add(titleCase(`${metal} ${core} ${noun}`));
-    const areas = AREAS.slice().sort(() => Math.random() - 0.5);
-    for (const a of areas) { if (out.size >= 6) break; out.add(titleCase(`The ${a} ${shape || stone || style || ''} ${noun}`)); }
-    return [...out];
+    const style = pickWord(o.subcategory + ' ' + o.name, ['Solitaire', 'Halo', 'Trilogy', 'Three Stone', 'Eternity', 'Tennis', 'Cuban', 'Hoop', 'Stud', 'Cluster', 'Twist', 'Bypass', 'Crossover', 'Split Shank', 'Pavé']);
+    const mid = [shape, style].filter(Boolean).map(titleCase).join(' ');
+    const free = GIVEN.filter(g => !used.has(nameKey(g))).sort(() => Math.random() - 0.5).slice(0, 6);
+    return free.map(g => `The ${g} ${mid ? mid + ' ' : ''}${noun}`.replace(/\s+/g, ' '));
   };
   const writeDesc = o => {
     const noun = (NOUN[o.category] || 'piece').toLowerCase(), pair = noun === 'earrings';
@@ -144,13 +159,16 @@
     const suppliers = S.must(await S.db.from('suppliers').select('id,name').is('deleted_at', null).order('name'));
     const autoRow = S.isOwner() ? (await S.db.from('settings').select('value').eq('key', 'auto_approve').maybeSingle()).data : null;
     const autoOn = !!(autoRow && autoRow.value === true);
-    S.render(v, html`${S.page({ title: 'Products', sub: 'Your catalogue, from first photo to the website', acts: html`${S.isOwner() ? html`<button class="btn autosw ${autoOn ? 'on' : ''}" id="autoap" title="When on, anything Jack submits goes live straight away">Auto-approve: <b>${autoOn ? 'ON' : 'OFF'}</b></button>` : ''}<a class="btn gold" href="#/products/new">${icon('camera')} Add product</a>` })}
+    S.render(v, html`${S.page({ title: 'Products', sub: 'Your catalogue, from first photo to the website', acts: html`${S.isOwner() ? html`<button class="btn autosw ${autoOn ? 'on' : ''}" id="autoap" title="When on, anything Jack submits goes live straight away">Auto-approve: <b>${autoOn ? 'ON' : 'OFF'}</b></button><button class="btn" id="selm">${icon('check')} Select</button><button class="btn" id="whall" title="Make every product photo's background white">White backgrounds</button>` : ''}<a class="btn gold" href="#/products/new">${icon('camera')} Add product</a>` })}
       ${autoOn ? S.banner('warn', 'Auto-approve is ON', 'Anything submitted goes live on the website straight away, without your review. Tap Auto-approve to switch it off.') : ''}
       <div class="toolbar"><div class="search">${icon('search')}<input id="pq" placeholder="Name, SKU or supplier reference" aria-label="Search products"></div>
         <select id="pcat" aria-label="Category"><option value="">All categories</option>${S.opts(CATEGORIES.map(c => [c, c]), cat)}</select>
         <select id="psup" aria-label="Supplier"><option value="">All suppliers</option>${S.opts(suppliers.map(s => [s.id, s.name]), sup)}</select></div>
       <div class="scrollx" style="margin-bottom:16px"><div class="chips" style="flex-wrap:nowrap">${SF.map(([k, l]) => html`<a class="chip ${k === st ? 'on' : ''}" href="#/products?status=${k}${cat ? '&cat=' + encodeURIComponent(cat) : ''}${sup ? '&sup=' + sup : ''}">${l}</a>`)}</div></div>
+      <div id="selbar" class="selbar" hidden><span id="selc">0 selected</span><button class="btn sm" id="selall">Select all</button><button class="btn sm ghost" id="selx">Cancel</button><button class="btn sm danger" id="seldel">${icon('trash')} Delete selected</button></div>
       <div id="plist">${S.loading()}</div>`);
+    let selMode = false, rowsNow = []; const sel = new Set();
+    const selUpd = () => { const b = $('#selbar', v); b.hidden = !selMode; $('#selc', v).textContent = sel.size + ' selected'; $('#seldel', v).disabled = !sel.size; };
     const nav = () => { const q = new URLSearchParams({ status: st }); if ($('#pcat', v).value) q.set('cat', $('#pcat', v).value); if ($('#psup', v).value) q.set('sup', $('#psup', v).value); S.go('#/products?' + q); };
     $('#pcat', v).onchange = nav; $('#psup', v).onchange = nav;
     const asw = $('#autoap', v); if (asw) asw.onclick = async () => {
@@ -168,6 +186,9 @@
       const r = await b; if (!live()) return;
       if (r.error) return S.render($('#plist', v), S.errorState(S.friendly(r.error.message)));
       let rows = r.data; if (st === 'low_stock') rows = rows.filter(x => x.low_stock_threshold != null && x.quantity <= x.low_stock_threshold);
+      rowsNow = rows;
+      if (selMode) return S.render($('#plist', v), html`<div class="list">${rows.map(x => { const t = productThumb(x); return html`<label class="li selrow ${sel.has(x.id) ? 'on' : ''}"><input type="checkbox" data-sel="${x.id}" ${sel.has(x.id) ? 'checked' : ''}>${t ? html`<img class="thumb" src="${t}" alt="" loading="lazy">` : html`<span class="ic" style="width:52px;height:52px">${icon('gem')}</span>`}
+        <span class="main-t"><span class="t" style="display:block">${x.name || 'Untitled product'}</span><span class="d" style="display:block">${[x.sku, x.category].filter(Boolean).join(' · ')}</span></span><span class="end">${pill('product', x.status)}</span></label>`; })}</div>`);
       S.render($('#plist', v), rows.length ? html`<div class="list">${rows.map(x => { const t = productThumb(x); return html`<a class="li" href="#/products/${x.id}">${t ? html`<img class="thumb" src="${t}" alt="" loading="lazy">` : html`<span class="ic" style="width:52px;height:52px">${icon('gem')}</span>`}
         <span class="main-t"><span class="t" style="display:block">${x.name || 'Untitled product'}</span><span class="d" style="display:block">${[x.sku, x.category, x.suppliers && x.suppliers.name].filter(Boolean).join(' · ') || 'Details not added yet'}</span></span>
         <span class="end">${pill('product', x.status)}${x.publish_status === 'failed' && x.status !== 'published' ? raw('<span class="pill red plain">Publishing failed</span>') : ''}
@@ -175,6 +196,56 @@
         : S.empty({ icon: 'gem', title: term || st !== 'all' ? 'No products match' : 'No products yet', text: 'Add your first product with the camera on your phone.', action: html`<a class="btn gold" href="#/products/new">${icon('camera')} Add product</a>` }));
     };
     let t; $('#pq', v).oninput = () => { clearTimeout(t); t = setTimeout(load, 250); }; load();
+    // ---- admin: select several products and delete them together
+    const sm = $('#selm', v); if (sm) sm.onclick = () => { selMode = !selMode; sel.clear(); selUpd(); load(); };
+    if (sm) {
+      $('#selx', v).onclick = () => { selMode = false; sel.clear(); selUpd(); load(); };
+      $('#selall', v).onclick = () => { rowsNow.forEach(x => sel.add(x.id)); selUpd(); load(); };
+      S.on(v, '[data-sel]', 'change', (e, b) => { if (b.checked) sel.add(b.dataset.sel); else sel.delete(b.dataset.sel); b.closest('.selrow').classList.toggle('on', b.checked); selUpd(); });
+      $('#seldel', v).onclick = async e => {
+        const ids = [...sel], picked = rowsNow.filter(x => sel.has(x.id)), live = picked.filter(x => x.status === 'published').length;
+        if (!ids.length) return;
+        if (!(await S.confirm({ title: `Delete ${ids.length} product${ids.length === 1 ? '' : 's'}?`, danger: true, confirm: 'Delete', typed: 'DELETE',
+          message: `${picked.slice(0, 6).map(x => x.name || 'Untitled').join(', ')}${picked.length > 6 ? ' and ' + (picked.length - 6) + ' more' : ''}. ${live ? live + ' of them ' + (live === 1 ? 'is' : 'are') + ' live and will be taken off the website, and ' + (live === 1 ? 'its' : 'their') + ' Buy now link switched off. ' : ''}Order and invoice history is kept.` }))) return;
+        S.act(e.currentTarget, async () => {
+          for (const x of picked) {
+            if (x.status === 'published') await S.rpc('product_review_action', { p_id: x.id, p_action: 'unpublish', p_note: 'Deleted' }).catch(() => {});
+            S.must(await S.db.from('products').update({ deleted_at: new Date().toISOString() }).eq('id', x.id));
+          }
+          selMode = false; sel.clear(); selUpd(); load();
+        }, `${ids.length} product${ids.length === 1 ? '' : 's'} deleted`).catch(() => {});
+      };
+    }
+    // ---- admin: make every existing product photo's background white
+    const wa = $('#whall', v); if (wa) wa.onclick = async () => {
+      const todo = S.must(await S.db.from('product_images').select('id,path,product_id,media_type,bg_white,products!inner(id,status,deleted_at)').eq('bg_white', false).is('products.deleted_at', null)).filter(x => x.media_type !== 'video');
+      if (!todo.length) return S.toast('All product photos already have white backgrounds.');
+      if (!(await S.confirm({ title: `Whiten ${todo.length} photo${todo.length === 1 ? '' : 's'}?`, message: 'Each photo’s background is made pure white and saved in place of the old one. Keep this page open until it finishes; it can take a few seconds per photo. Photos that already have a white background are left as they are.', confirm: 'Start' }))) return;
+      const sh = S.sheet({ title: 'Whitening photos', body: html`<p id="wprog" class="muted" style="margin-top:0">Starting…</p><div class="pbar"><i id="wbar"></i></div><p class="small muted">Please keep this page open.</p>` });
+      let done = 0, changed = 0, failed = 0; const touched = new Set();
+      for (const im of todo) {
+        $('#wprog', sh.el).textContent = `Photo ${done + 1} of ${todo.length}…`;
+        try {
+          const res = await fetch(S.publicImg(im.path) + '?v=' + Date.now()); if (!res.ok) throw new Error('download');
+          const r = await S.whiteBgAI(await res.blob());
+          if (r.changed) {
+            const path = `${im.product_id}/${S.uuid()}.jpg`;
+            await S.upload('product-images', path, r.blob, 'image/jpeg');
+            S.must(await S.db.from('product_images').update({ path, bg_white: true }).eq('id', im.id));
+            await S.db.storage.from('product-images').remove([im.path]);
+            changed++; if (im.products && im.products.status === 'published') touched.add(im.product_id);
+          } else S.must(await S.db.from('product_images').update({ bg_white: true }).eq('id', im.id));
+        } catch (er) { failed++; console.warn(er); }
+        done++; const b = $('#wbar', sh.el); if (b) b.style.width = Math.round(done / todo.length * 100) + '%';
+      }
+      // update the photos on the Stripe payment pages of live pieces
+      if (touched.size) {
+        $('#wprog', sh.el).textContent = 'Updating the photos on the payment pages…';
+        const { data: { session } } = await S.db.auth.getSession();
+        for (const id of touched) await fetch(S.supabaseUrl + '/functions/v1/product-payment-link', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (session ? session.access_token : '') }, body: JSON.stringify({ product_id: id }) }).catch(() => {});
+      }
+      sh.close(); S.toast(`Done: ${changed} photo${changed === 1 ? '' : 's'} made white${failed ? ', ' + failed + ' could not be changed' : ''}.`, failed ? { bad: true } : undefined); load();
+    };
   });
 
   // =========================== NEW → draft ===========================
@@ -204,6 +275,24 @@
       const n = S.must(await S.db.from('product_review_notes').select('*').eq('product_id', prod.id).eq('action', 'request_changes').order('created_at', { ascending: false }).limit(1))[0];
       if (n) S.render($('#ownernote', v), S.banner('warn', 'The admin asked for changes', html`<p class="pre" style="margin:4px 0 0">${n.note}</p>`));
     }
+    // warn before leaving a piece that has not been submitted
+    S._draftOpen = ['draft', 'changes_requested', 'rejected'].includes(prod.status);
+    S.navGuard = async to => {
+      if (to.split('?')[0] === `/products/${prod.id}/edit`) return true;            // moving between steps is fine
+      const { data } = await S.db.from('products').select('status,deleted_at').eq('id', prod.id).maybeSingle();
+      if (!data || data.deleted_at || !['draft', 'changes_requested', 'rejected'].includes(data.status)) { S.navGuard = null; S._draftOpen = false; return true; }
+      const choice = await new Promise(res => {
+        let done = false;
+        const sh = S.sheet({ title: 'You haven’t submitted this piece', body: html`<p class="muted" style="margin-top:0"><b>${prod.name || 'This product'}</b> has not been sent for approval yet. It won’t go on the website until it is submitted.</p>`,
+          foot: html`<button class="btn ghost" id="lv">Leave anyway</button><button class="btn" id="bk">Go back</button><button class="btn gold" id="sbm">${icon('send')} Submit it</button>`,
+          onClose: () => { if (!done) res('back'); } });
+        const pick = v => () => { done = true; res(v); sh.close(); };
+        $('#lv', sh.el).onclick = pick('leave'); $('#bk', sh.el).onclick = pick('back'); $('#sbm', sh.el).onclick = pick('submit');
+      });
+      if (choice === 'leave') { S.navGuard = null; S._draftOpen = false; return true; }
+      if (choice === 'submit') setTimeout(() => S.go(`#/products/${prod.id}/edit?step=review`), 60);
+      return false;
+    };
     const next = () => S.go(`#/products/${prod.id}/edit?step=${STEPS[Math.min(i + 1, STEPS.length - 1)][0]}`);
     const prev = i > 0 ? `#/products/${prod.id}/edit?step=${STEPS[i - 1][0]}` : '#/products/' + prod.id;
     await WIZ[step]($('#step', v), prod, { next, prev, locked });
@@ -214,6 +303,7 @@
   const WIZ = {
     // ---------- 1. photos
     async photos(el, prod, w) {
+      S.whiteBgWarmUp && S.whiteBgWarmUp();
       let autoWhite = true; try { autoWhite = localStorage.getItem('lk_white_bg') !== '0'; } catch (e) { }
       const draw = async () => {
         const imgs = S.must(await S.db.from('product_images').select('*').eq('product_id', prod.id).order('position'));
@@ -248,11 +338,12 @@
                 S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++, media_type: 'video' }));
               } else {
                 let prep = null;
-                if (autoWhite) { const r = await whiteBg(f).catch(() => null); if (r) { prep = { blob: r.blob, type: 'image/jpeg', ext: 'jpg' }; if (r.changed) whitened++; } }
+                let wb = false;
+                if (autoWhite) { const r = await S.whiteBgAI(f, whiteBg).catch(() => null); if (r) { prep = { blob: r.blob, type: 'image/jpeg', ext: 'jpg' }; wb = true; if (r.changed) whitened++; } }
                 if (!prep) prep = await S.prepareImage(f);
                 const path = `${prod.id}/${S.uuid()}.${prep.ext}`;
                 await S.upload('product-images', path, prep.blob, prep.type);
-                S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++ }));
+                S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++, bg_white: wb }));
               }
             } catch (e) { failed.push(f.name + ': ' + S.friendly(e.message)); }
             tile.textContent = 'Done';
@@ -283,11 +374,11 @@
           const im = imgs.find(x => x.id === b.dataset.white); if (!im) return;
           S.act(b, async () => {
             const res = await fetch(S.publicImg(im.path) + '?v=' + Date.now()); if (!res.ok) throw new Error('Could not open the photo');
-            const r = await whiteBg(await res.blob());
-            if (!r.changed) { S.toast('This background is already white.'); return; }
+            const r = await S.whiteBgAI(await res.blob(), whiteBg);
+            if (!r.changed) { S.must(await S.db.from('product_images').update({ bg_white: true }).eq('id', im.id)); S.toast('This background is already white.'); return; }
             const path = `${prod.id}/${S.uuid()}.jpg`;
             await S.upload('product-images', path, r.blob, 'image/jpeg');
-            S.must(await S.db.from('product_images').update({ path }).eq('id', im.id));
+            S.must(await S.db.from('product_images').update({ path, bg_white: true }).eq('id', im.id));
             await S.db.storage.from('product-images').remove([im.path]);
             draw();
           }, 'Background made white').catch(() => {});
@@ -300,29 +391,41 @@
     async details(el, prod, w) {
       const cats = CATEGORIES.includes(prod.category) || !prod.category ? CATEGORIES : [prod.category, ...CATEGORIES];
       S.render(el, html`<section class="card"><h2>Details</h2><form class="form" id="df" novalidate style="margin-top:12px">
-        <label class="fld"><span>Product name <em>(type your own, or tap Suggest names)</em></span><input name="name" value="${prod.name}" maxlength="140" required placeholder="e.g. Oval Solitaire Engagement Ring" spellcheck="true" lang="en-GB" autocapitalize="words"></label>
+        <label class="fld"><span>Product name <em class="req">*</em> <em>(type your own, or tap Suggest names)</em></span><input name="name" value="${prod.name}" maxlength="140" required placeholder="e.g. Oval Solitaire Engagement Ring" spellcheck="true" lang="en-GB" autocapitalize="words"></label>
         <div class="flex" style="margin-top:-6px"><button class="btn sm" type="button" id="sugn">${icon('sparkle')} Suggest names</button><span class="small muted">Pick the category, metal and stone first for better ideas.</span></div>
         <div id="names" class="chips" style="flex-wrap:wrap"></div>
+        <div id="dupe"></div>
         <div id="spell"></div>
-        <div class="row"><label class="fld"><span>Category</span><select name="category"><option value="">Choose…</option>${S.opts(cats.map(c => [c, c]), prod.category)}</select></label>
+        <div class="row"><label class="fld"><span>Category <em class="req">*</em></span><select name="category"><option value="">Choose…</option>${S.opts(cats.map(c => [c, c]), prod.category)}</select></label>
           <label class="fld"><span>Subcategory <em>(optional)</em></span><input name="subcategory" value="${prod.subcategory || ''}" maxlength="80" placeholder="e.g. Solitaire"></label></div>
         <label class="fld"><span>Type of product</span><select name="product_type">${S.opts(TYPES, prod.product_type)}</select><small id="typehint"></small></label>
-        <div class="row"><label class="fld"><span>SKU / reference</span><input name="sku" value="${prod.sku || ''}" maxlength="40" autocapitalize="characters"></label>
+        <div class="row"><label class="fld"><span>SKU / reference <em class="req">*</em></span><input name="sku" value="${prod.sku || ''}" maxlength="40" autocapitalize="characters"></label>
           <div class="fld"><span>&nbsp;</span><button class="btn" type="button" id="sug">${icon('sparkle')} Suggest a reference</button></div></div>
         <div id="jfields"><div class="section-t">Materials</div>
-          <div class="row3"><label class="fld"><span>Metal</span><input name="metal" value="${prod.metal || ''}" maxlength="60" placeholder="e.g. 18ct white gold" list="metals"></label>
-            <label class="fld"><span>Gemstone</span><input name="gemstone" value="${prod.gemstone || ''}" maxlength="120" placeholder="e.g. 1.20ct oval diamond, G VS1"></label>
+          <div class="row3"><label class="fld"><span>Metal <em class="req">*</em></span><input name="metal" value="${prod.metal || ''}" maxlength="60" placeholder="e.g. 18ct white gold" list="metals"></label>
+            <label class="fld"><span>Gemstone <em class="req">*</em></span><input name="gemstone" value="${prod.gemstone || ''}" maxlength="120" placeholder="e.g. 1.20ct oval diamond, G VS1"></label>
             <label class="fld"><span>Other material <em>(optional)</em></span><input name="material" value="${prod.material || ''}" maxlength="80"></label></div>
           <datalist id="metals"><option>18ct yellow gold</option><option>18ct white gold</option><option>18ct rose gold</option><option>9ct yellow gold</option><option>Platinum</option><option>Sterling silver</option></datalist>
           <div class="row"><label class="fld"><span>Weight (g) <em>(if known)</em></span><input name="weight_g" value="${prod.weight_g ?? ''}" inputmode="decimal"></label>
             <label class="fld"><span>Size / dimensions <em>(if relevant)</em></span><input name="dimensions" value="${prod.dimensions || ''}" maxlength="80" placeholder="e.g. Ring size L, 2.2mm band"></label></div></div>
-        <label class="fld"><span>Description <em>(shown on the website, at least one full sentence)</em></span><textarea name="description" maxlength="4000" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
+        <label class="fld"><span>Description <em class="req">*</em> <em>(shown on the website, at least one full sentence)</em></span><textarea name="description" maxlength="4000" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
         <div class="flex" style="margin-top:-6px"><button class="btn sm" type="button" id="wdesc">${icon('sparkle')} Write it for me</button><button class="btn sm ghost" type="button" id="tidy">Tidy up spelling &amp; capitals</button></div>
         <label class="fld"><span>Internal notes <em>(team only)</em></span><textarea name="notes" maxlength="4000" style="min-height:80px">${prod.notes || ''}</textarea></label>
-        <div class="row" id="stockrow"><label class="fld"><span>How many in stock now? <em style="color:var(--rose-d)">(required)</em></span><input name="stock_now" value="${prod.quantity > 0 ? prod.quantity : ''}" inputmode="numeric" placeholder="e.g. 1" required><small>Type the number you have right now. We record the change for you.</small></label>
+        <div class="row" id="stockrow"><label class="fld"><span>How many in stock now? <em class="req">*</em></span><input name="stock_now" value="${prod.quantity > 0 ? prod.quantity : ''}" inputmode="numeric" placeholder="e.g. 1" required><small>Type the number you have right now. We record the change for you.</small></label>
           <label class="fld"><span>Low stock warning at <em>(optional)</em></span><input name="low_stock_threshold" value="${prod.low_stock_threshold ?? ''}" inputmode="numeric" placeholder="e.g. 1"></label></div>
+        <p class="small muted" style="margin:4px 0 0"><em class="req">*</em> must be filled in before you can carry on.</p>
       </form></section>${wizbar(w.prev)}`);
       const f = $('#df', el);
+      // ---- names already used by other pieces (to stop the same name twice)
+      const others = S.must(await S.db.from('products').select('id,name').is('deleted_at', null).neq('id', prod.id)).filter(x => (x.name || '').trim());
+      const usedKeys = new Set(others.map(x => nameKey(x.name)).filter(Boolean));
+      const dupeCheck = () => {
+        const r = nameClash(f.name.value, others);
+        S.render($('#dupe', el), r ? html`<div class="banner ${r.block ? 'bad' : 'warn'}" style="margin:6px 0 4px">${icon('alert')}<div class="grow"><b>${r.block ? 'This name is already used' : 'A similar name already exists'}</b>
+          ${r.block ? 'Already used by: ' : 'Similar to: '}<b>${r.other.name}</b>. ${r.block ? 'Pick a different name.' : 'Check this is not the same piece before you carry on.'}</div></div>` : '');
+        return r;
+      };
+      let dt; f.name.addEventListener('input', () => { clearTimeout(dt); dt = setTimeout(dupeCheck, 300); }); dupeCheck();
       const adapt = () => { const t = f.product_type.value; $('#jfields', el).hidden = t === 'service'; $('#stockrow', el).hidden = t === 'service';
         $('#typehint', el).textContent = { stocked: 'We track stock, supplier and purchase cost.', one_off: 'A single piece: stock is 1 when bought.', bespoke: 'Made to order for a client; supplier optional.', in_house: 'Made in our workshop; record material costs.', service: 'No stock or supplier needed.' }[t]; };
       f.product_type.onchange = adapt; adapt();
@@ -340,29 +443,39 @@
       f.name.addEventListener('blur', () => { if (f.name.value.trim()) f.name.value = titleCase(f.name.value); });
       $('#tidy', el).onclick = () => { ['name', 'description'].forEach(n => slips(f[n].value).forEach(([w, r]) => f[n].value = fixWord(f[n].value, w, r)));
         if (f.name.value.trim()) f.name.value = titleCase(f.name.value); if (f.description.value.trim()) f.description.value = tidyText(f.description.value); checkSpell(); S.toast('Tidied up'); };
-      $('#sugn', el).onclick = () => { const ideas = nameIdeas(S.form(f));
+      $('#sugn', el).onclick = () => { const ideas = nameIdeas(S.form(f), usedKeys);
         S.render($('#names', el), html`${ideas.map(n => html`<button type="button" class="chip" data-name="${n}">${n}</button>`)}<button type="button" class="chip" id="more">More ideas ↻</button>`);
         $('#more', el).onclick = () => $('#sugn', el).click(); };
       S.on(el, '[data-name]', 'click', (e, b) => { f.name.value = b.dataset.name; S.$$('[data-name]', el).forEach(x => x.classList.toggle('on', x === b)); checkSpell(); });
       $('#wdesc', el).onclick = async () => { const o = S.form(f);
         if (f.description.value.trim() && !(await S.confirm({ title: 'Replace the description?', message: 'What is written there now will be replaced.', confirm: 'Replace' }))) return;
         f.description.value = writeDesc(o); checkSpell(); };
-      $('#nextb', el).onclick = e => {
+      $('#nextb', el).onclick = async e => {
+        const btn = e.currentTarget;
         S.clearErr(f);
         if (f.name.value.trim()) f.name.value = titleCase(f.name.value);
         if (f.description.value.trim()) f.description.value = tidyText(f.description.value);
         if (checkSpell()) { S.toast('Fix the spelling first (tap Fix).', { bad: true }); $('#spell', el).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-        const o = S.form(f);
-        if (!o.name) return S.fieldErr(f, 'name', 'Give the product a name, or tap Suggest names');
-        if ((o.description || '').trim().length < 20) return S.fieldErr(f, 'description', 'Write at least one full sentence, or tap Write it for me');
-        if (!o.sku) f.sku.value = o.sku = 'LK-' + ((o.category || 'LK').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+        const o = S.form(f), svc = o.product_type === 'service';
+        const need = [];
+        if (!o.name) need.push(['name', 'Product name', 'Give the product a name, or tap Suggest names']);
+        if (!o.category) need.push(['category', 'Category', 'Choose a category']);
+        if (!o.sku) need.push(['sku', 'SKU / reference', 'Type a reference or tap Suggest a reference']);
+        if (!svc && !o.metal) need.push(['metal', 'Metal', 'Type the metal, e.g. 18ct white gold']);
+        if (!svc && !o.gemstone) need.push(['gemstone', 'Gemstone', 'Describe the stones, e.g. A 1.00ct round brilliant centre diamond']);
+        if ((o.description || '').trim().length < 20) need.push(['description', 'Description', 'Write at least one full sentence, or tap Write it for me']);
+        if (!svc && (!/^\d{1,5}$/.test(o.stock_now || '') || +o.stock_now < 1)) need.push(['stock_now', 'Stock', 'Put in how many are in stock (1 or more)']);
+        if (need.length) { need.forEach(([n, , m]) => S.fieldErr(f, n, m)); S.toast('Still to fill in: ' + need.map(x => x[1]).join(', '), { bad: true });
+          const first = f.elements[need[0][0]]; if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => first.focus(), 300); } return; }
         if (o.weight_g && isNaN(+o.weight_g)) return S.fieldErr(f, 'weight_g', 'Weight must be a number');
         if (o.low_stock_threshold && !/^\d+$/.test(o.low_stock_threshold)) return S.fieldErr(f, 'low_stock_threshold', 'Use a whole number');
-        if (o.product_type !== 'service' && (!/^\d{1,5}$/.test(o.stock_now || '') || +o.stock_now < 1)) { S.toast('Put in how many are in stock before you carry on.', { bad: true }); return S.fieldErr(f, 'stock_now', 'You must put in how many are in stock (1 or more)'); }
+        const clash = dupeCheck();
+        if (clash && clash.block) { $('#dupe', el).scrollIntoView({ behavior: 'smooth', block: 'center' }); return S.fieldErr(f, 'name', 'This name is already used by ' + clash.other.name); }
+        if (clash && !clash.block && !(await S.confirm({ title: 'A similar name already exists', message: '“' + clash.other.name + '” is already in the studio. Is this a different piece?', confirm: 'Yes, carry on' }))) return;
         const upd = { name: o.name, category: o.category || null, subcategory: o.subcategory || null, product_type: o.product_type, sku: o.sku ? o.sku.toUpperCase() : null,
           metal: o.metal || null, gemstone: o.gemstone || null, material: o.material || null, weight_g: o.weight_g ? +o.weight_g : null, dimensions: o.dimensions || null,
           description: o.description || '', notes: o.notes || null, low_stock_threshold: o.low_stock_threshold ? +o.low_stock_threshold : null };
-        S.act(e.currentTarget, async () => { S.must(await S.db.from('products').update(upd).eq('id', prod.id));
+        S.act(btn, async () => { S.must(await S.db.from('products').update(upd).eq('id', prod.id));
           if (o.product_type !== 'service') {
             const cur = S.must(await S.db.from('products').select('quantity').eq('id', prod.id).single()).quantity || 0, want = +o.stock_now, diff = want - cur;
             if (diff) { const { count } = await S.db.from('stock_movements').select('id', { count: 'exact', head: true }).eq('product_id', prod.id);

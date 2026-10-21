@@ -31,6 +31,7 @@
         <h1>${greet}, ${S.me.full_name.split(' ')[0] || 'there'}</h1></div>
         <div class="acts"><a class="btn" href="#/customers/new">${icon('plus')} Customer</a><a class="btn gold" href="#/products/new">${icon('camera')} Add product</a></div></header>
       ${alerts.map(a => html`<a class="banner ${a[0]}" href="${a[3]}" style="text-decoration:none">${icon('alert')}<div class="grow"><b>${a[1]}</b>${a[2]}</div>${icon('chev')}</a>`)}
+      ${S.isOwner() ? raw('<div id="teamact"></div>') : ''}
       <div class="grid g4" style="margin-bottom:18px">
         ${m ? html`
           <a class="stat" href="#/finance"><div class="k">Net sales · this month ${m.cogs.estimated ? '' : ''}</div><div class="v">${moneyShort(m.sales.net_pence)}</div><div class="s">${m.sales.orders} paid order${m.sales.orders === 1 ? '' : 's'}</div></a>
@@ -67,6 +68,7 @@
               : S.empty({ icon: 'card', title: 'No payments yet' })}</section>` : ''}
         </div>
       </div>`);
+    if (S.isOwner() && S.renderTeamActivity) S.renderTeamActivity(S.$('#teamact', v));
     S.on(v, '[data-done]', 'change', async (e, c) => {
       try { S.must(await S.db.from('tasks').update({ status: 'done' }).eq('id', c.dataset.done)); c.closest('.li').style.opacity = .45; S.toast('Follow-up completed'); }
       catch (er) { c.checked = false; S.toast(er.message, { bad: true }); }
