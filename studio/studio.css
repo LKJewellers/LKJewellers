@@ -419,3 +419,6 @@ button.li{width:100%;border-left:0;border-right:0;border-bottom:0;background:non
 .wbtoggle input{width:20px;height:20px;margin-top:2px;accent-color:var(--gold-d);flex:none}
 .vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px}
 .vids video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:#000}
+
+.btn.autosw b{margin-left:4px}
+.btn.autosw.on{background:var(--sage,#e6f2ec);border-color:var(--sage-d,#2f7d5b);color:var(--sage-d,#2f7d5b)}

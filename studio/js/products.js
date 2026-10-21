@@ -142,7 +142,10 @@
   S.route('/products', async (v, p, live) => {
     const prm = S.params(); const st = prm.get('status') || 'all', cat = prm.get('cat') || '', sup = prm.get('sup') || '';
     const suppliers = S.must(await S.db.from('suppliers').select('id,name').is('deleted_at', null).order('name'));
-    S.render(v, html`${S.page({ title: 'Products', sub: 'Your catalogue, from first photo to the website', acts: html`<a class="btn gold" href="#/products/new">${icon('camera')} Add product</a>` })}
+    const autoRow = S.isOwner() ? (await S.db.from('settings').select('value').eq('key', 'auto_approve').maybeSingle()).data : null;
+    const autoOn = !!(autoRow && autoRow.value === true);
+    S.render(v, html`${S.page({ title: 'Products', sub: 'Your catalogue, from first photo to the website', acts: html`${S.isOwner() ? html`<button class="btn autosw ${autoOn ? 'on' : ''}" id="autoap" title="When on, anything Jack submits goes live straight away">Auto-approve: <b>${autoOn ? 'ON' : 'OFF'}</b></button>` : ''}<a class="btn gold" href="#/products/new">${icon('camera')} Add product</a>` })}
+      ${autoOn ? S.banner('warn', 'Auto-approve is ON', 'Anything submitted goes live on the website straight away, without your review. Tap Auto-approve to switch it off.') : ''}
       <div class="toolbar"><div class="search">${icon('search')}<input id="pq" placeholder="Name, SKU or supplier reference" aria-label="Search products"></div>
         <select id="pcat" aria-label="Category"><option value="">All categories</option>${S.opts(CATEGORIES.map(c => [c, c]), cat)}</select>
         <select id="psup" aria-label="Supplier"><option value="">All suppliers</option>${S.opts(suppliers.map(s => [s.id, s.name]), sup)}</select></div>
@@ -150,6 +153,10 @@
       <div id="plist">${S.loading()}</div>`);
     const nav = () => { const q = new URLSearchParams({ status: st }); if ($('#pcat', v).value) q.set('cat', $('#pcat', v).value); if ($('#psup', v).value) q.set('sup', $('#psup', v).value); S.go('#/products?' + q); };
     $('#pcat', v).onchange = nav; $('#psup', v).onchange = nav;
+    const asw = $('#autoap', v); if (asw) asw.onclick = async () => {
+      if (!autoOn && !(await S.confirm({ title: 'Switch auto-approve on?', message: 'Anything submitted will go live on the website straight away, with its price and Buy now link, without your review.', confirm: 'Switch on' }))) return;
+      S.act(asw, async () => { S.must(await S.db.from('settings').upsert({ key: 'auto_approve', value: !autoOn, is_public: false })); S.dispatch(); }, autoOn ? 'Auto-approve switched off' : 'Auto-approve switched on').catch(() => {});
+    };
     const load = async () => {
       const term = $('#pq', v).value.trim().replace(/[,()*]/g, ' ');
       let b = S.db.from('products').select('id,name,sku,status,category,quantity,low_stock_threshold,selling_price_pence,publish_status,product_type,updated_at,suppliers(name),product_images(path,is_primary,position,media_type)').is('deleted_at', null).order('updated_at', { ascending: false }).limit(300);
@@ -482,7 +489,9 @@
         <p class="muted">${canSubmit ? 'When you submit, the admin is notified and will approve, request changes, or publish it to the website.' : 'Current status: ' + S.statusLabel('product', p2.status) + '.'}</p></section>
         <div class="wizbar"><a class="btn" href="${w.prev}">${icon('back')} Back</a>
           ${canSubmit ? html`<button class="btn gold" id="submit" ${issues.blocking.length ? 'disabled' : ''}>${icon('send')} Submit for admin review</button>` : S.isOwner() && ['ready_for_review', 'owner_review'].includes(p2.status) ? html`<a class="btn gold" href="#/products/${p2.id}/review">Open admin review</a>` : html`<a class="btn gold" href="#/products/${p2.id}">Done</a>`}</div>`);
-      const sb = $('#submit', el); if (sb) sb.onclick = () => S.act(sb, async () => { await S.rpc('product_submit', { p_id: prod.id }); S.go('#/products/' + prod.id); }, 'Submitted for admin review').catch(() => {});
+      const sb = $('#submit', el); if (sb) sb.onclick = () => S.act(sb, async () => { await S.rpc('product_submit', { p_id: prod.id });
+        const { data: after } = await S.db.from('products').select('status').eq('id', prod.id).single();
+        S.toast(after && after.status === 'published' ? 'Auto-approved: it is live on the website' : 'Submitted for admin review'); S.go('#/products/' + prod.id); }).catch(() => {});
     }
   };
 
