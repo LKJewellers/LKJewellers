@@ -22,7 +22,8 @@
       const imgs = (p.images || []).length ? p.images : [p.image_path];
       const details = [['Metal', p.metal], ['Stone', p.gemstone], ['Material', p.material]].filter(x => x[1]);
       root.innerHTML = `<div class="item"><div><img id="mainimg" src="${esc(LK.productImage(imgs[0]))}" alt="${esc(p.name)}" width="800" height="800">
-        ${imgs.length > 1 ? `<div class="thumbs-row">${imgs.map((im, i) => `<button type="button" data-i="${i}" aria-label="Photo ${i + 1}"><img src="${esc(LK.productImage(im))}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}</div>
+        ${imgs.length > 1 ? `<div class="thumbs-row">${imgs.map((im, i) => `<button type="button" data-i="${i}" aria-label="Photo ${i + 1}"><img src="${esc(LK.productImage(im))}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+        ${(p.videos || []).map(v => `<video class="item-video" src="${esc(LK.productImage(v))}" controls muted playsinline loop preload="metadata"></video>`).join('')}</div>
         <div><span class="label">${esc(p.category || '')}</span><h1>${esc(p.name)}</h1><p class="price">${price(p)}</p>
         <p class="desc">${esc(p.description).replace(/\n/g, '<br>')}</p>
         ${details.length ? `<dl class="spec">${details.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}

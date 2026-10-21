@@ -86,7 +86,56 @@
     return s + '. Designed and finished by LK Jewellers in London.';
   };
 
-  const productThumb = p => { const im = (p.product_images || []).sort((a, b) => (b.is_primary - a.is_primary) || a.position - b.position)[0]; return im ? S.publicImg(im.path) : ''; };
+  // ---------- photos & videos helpers ----------
+  const isVid = f => /^video\//.test(f.type) || /\.(mp4|mov|m4v|webm)$/i.test(f.name || '');
+  const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif|gif)$/i.test(f.name || '');
+  // Automatic white background: finds the plain background by spreading in from the edges of the photo
+  // (it follows smooth gradients but stops at the edge of the piece), then paints it pure white.
+  const whiteBg = async file => {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height)), W = Math.round(bmp.width * k), H = Math.round(bmp.height * k);
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, W, H);
+    const toJpeg = () => new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    // work out the background on a smaller copy (fast on phones)
+    const s = Math.min(1, 640 / Math.max(W, H)), w = Math.max(2, Math.round(W * s)), h = Math.max(2, Math.round(H * s));
+    const sc = document.createElement('canvas'); sc.width = w; sc.height = h; const sg = sc.getContext('2d', { willReadFrequently: true });
+    sg.imageSmoothingQuality = 'high'; sg.drawImage(c, 0, 0, w, h); const sd = sg.getImageData(0, 0, w, h).data;
+    let R = 0, G = 0, B = 0, n = 0; const border = [];
+    for (let x = 0; x < w; x++) border.push(x, (h - 1) * w + x);
+    for (let y = 1; y < h - 1; y++) border.push(y * w, y * w + w - 1);
+    border.forEach(i => { R += sd[i * 4]; G += sd[i * 4 + 1]; B += sd[i * 4 + 2]; n++; }); R /= n; G /= n; B /= n;
+    const far = i => Math.max(Math.abs(sd[i * 4] - R), Math.abs(sd[i * 4 + 1] - G), Math.abs(sd[i * 4 + 2] - B));
+    const step = (i, j) => Math.abs(sd[i * 4] - sd[j * 4]) + Math.abs(sd[i * 4 + 1] - sd[j * 4 + 1]) + Math.abs(sd[i * 4 + 2] - sd[j * 4 + 2]);
+    if (R > 247 && G > 247 && B > 247 && border.every(i => far(i) < 10)) return { blob: await toJpeg(), changed: false };
+    const bg = new Uint8Array(w * h), q = new Int32Array(w * h); let qh = 0, qt = 0;
+    const seed = i => { if (!bg[i]) { bg[i] = 1; q[qt++] = i; } };
+    border.forEach(i => { if (far(i) < 80) seed(i); });
+    if (!qt) return { blob: await toJpeg(), changed: false };
+    const grow = (maxStep, maxFar) => { while (qh < qt) { const i = q[qh++], x = i % w, y = (i / w) | 0;
+      const nb = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1];
+      for (const j of nb) if (j >= 0 && !bg[j] && step(i, j) <= maxStep && far(j) <= maxFar) { bg[j] = 1; q[qt++] = j; } } };
+    grow(20, 95);
+    // gaps inside the piece (e.g. the middle of a ring) that are exactly the background colour
+    for (let i = 0; i < w * h; i++) if (!bg[i] && far(i) < 9) seed(i);
+    grow(10, 22);
+    let count = 0; for (let i = 0; i < w * h; i++) count += bg[i];
+    if (count < w * h * 0.08 || count > w * h * 0.998) return { blob: await toJpeg(), changed: false };   // nothing sensible found: leave the photo alone
+    // soften the mask edge, scale it up, paint the background white
+    const m = document.createElement('canvas'); m.width = w; m.height = h; const mg = m.getContext('2d'); const md = mg.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let t = 0, c2 = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < w && yy < h) { t += bg[yy * w + xx]; c2++; } }
+      const o = (y * w + x) * 4; md.data[o + 3] = Math.round(t / c2 * 255); }
+    mg.putImageData(md, 0, 0);
+    const M = document.createElement('canvas'); M.width = W; M.height = H; const Mg = M.getContext('2d', { willReadFrequently: true });
+    Mg.imageSmoothingEnabled = true; Mg.imageSmoothingQuality = 'high'; Mg.drawImage(m, 0, 0, W, H);
+    const a = Mg.getImageData(0, 0, W, H).data, img = g.getImageData(0, 0, W, H), d = img.data;
+    for (let i = 0; i < d.length; i += 4) { const t = a[i + 3] / 255; if (t) { d[i] += (255 - d[i]) * t; d[i + 1] += (255 - d[i + 1]) * t; d[i + 2] += (255 - d[i + 2]) * t; } }
+    g.putImageData(img, 0, 0);
+    return { blob: await toJpeg(), changed: true };
+  };
+
+  const productThumb = p => { const im = (p.product_images || []).filter(x => x.media_type !== 'video').sort((a, b) => (b.is_primary - a.is_primary) || a.position - b.position)[0]; return im ? S.publicImg(im.path) : ''; };
 
   // =========================== LIST ===========================
   const SF = [['all', 'All'], ['draft', 'Drafts'], ['review', 'Awaiting review'], ['changes_requested', 'Changes requested'], ['approved', 'Approved'], ['published', 'Published'], ['unpublished', 'Unpublished'], ['publish_failed', 'Publishing failed'], ['low_stock', 'Low stock']];
@@ -103,7 +152,7 @@
     $('#pcat', v).onchange = nav; $('#psup', v).onchange = nav;
     const load = async () => {
       const term = $('#pq', v).value.trim().replace(/[,()*]/g, ' ');
-      let b = S.db.from('products').select('id,name,sku,status,category,quantity,low_stock_threshold,selling_price_pence,publish_status,product_type,updated_at,suppliers(name),product_images(path,is_primary,position)').is('deleted_at', null).order('updated_at', { ascending: false }).limit(300);
+      let b = S.db.from('products').select('id,name,sku,status,category,quantity,low_stock_threshold,selling_price_pence,publish_status,product_type,updated_at,suppliers(name),product_images(path,is_primary,position,media_type)').is('deleted_at', null).order('updated_at', { ascending: false }).limit(300);
       if (st === 'review') b = b.in('status', ['ready_for_review', 'owner_review']);
       else if (st === 'publish_failed') b = b.eq('publish_status', 'failed').neq('status', 'published');
       else if (st !== 'all' && st !== 'low_stock') b = b.eq('status', st);
@@ -158,49 +207,83 @@
   const WIZ = {
     // ---------- 1. photos
     async photos(el, prod, w) {
+      let autoWhite = true; try { autoWhite = localStorage.getItem('lk_white_bg') !== '0'; } catch (e) { }
       const draw = async () => {
         const imgs = S.must(await S.db.from('product_images').select('*').eq('product_id', prod.id).order('position'));
-        S.render(el, html`<section class="card"><div class="ch"><div><h2>Photos</h2><p class="muted small">Add several angles. The photo marked <b>Main</b> is shown first on the website. Use ★ to choose it and the arrows to reorder.</p></div></div>
-          <div class="photos" id="ph">${imgs.map((im, k) => html`<div class="ph-item ${im.is_primary ? 'primary' : ''}"><img src="${S.publicImg(im.path)}" alt="Product photo ${k + 1}" loading="lazy">${im.is_primary ? raw('<span class="lbl">Main</span>') : ''}
-            <div class="tools"><button type="button" data-prim="${im.id}" title="Make main photo" aria-label="Make main photo" ${im.is_primary ? 'disabled' : ''}>${icon('star')}</button>
+        const nPhotos = imgs.filter(x => x.media_type !== 'video').length;
+        S.render(el, html`<section class="card"><div class="ch"><div><h2>Photos &amp; videos</h2><p class="muted small">Add several angles, and short videos if you have them. The photo marked <b>Main</b> is shown first on the website. Use ★ to choose it and the arrows to reorder.</p></div></div>
+          <label class="wbtoggle"><input type="checkbox" id="autow" ${autoWhite ? 'checked' : ''}> <span><b>Make backgrounds white automatically</b><br><span class="muted small">Untick this before adding a photo if you want to keep its own background.</span></span></label>
+          <div class="photos" id="ph">${imgs.map((im, k) => { const vid = im.media_type === 'video'; return html`<div class="ph-item ${im.is_primary ? 'primary' : ''}">
+            ${vid ? html`<video src="${S.publicImg(im.path)}" muted playsinline loop autoplay preload="metadata"></video><span class="lbl vid">Video</span>` : html`<img src="${S.publicImg(im.path)}" alt="Product photo ${k + 1}" loading="lazy">${im.is_primary ? raw('<span class="lbl">Main</span>') : ''}`}
+            <div class="tools">${vid ? raw('<span></span>') : html`<button type="button" data-prim="${im.id}" title="Make main photo" aria-label="Make main photo" ${im.is_primary ? 'disabled' : ''}>${icon('star')}</button>`}
             <span class="flex" style="gap:6px"><button type="button" data-mv="${im.id}|-1" aria-label="Move earlier" ${k === 0 ? 'disabled' : ''}>${icon('left')}</button><button type="button" data-mv="${im.id}|1" aria-label="Move later" ${k === imgs.length - 1 ? 'disabled' : ''}>${icon('right')}</button></span>
-            <button type="button" data-del="${im.id}" aria-label="Remove photo">${icon('trash')}</button></div></div>`)}
+            <button type="button" data-del="${im.id}" aria-label="Remove">${icon('trash')}</button></div>
+            ${vid ? '' : html`<button type="button" class="wbbtn" data-white="${im.id}" title="Make this photo's background white">White background</button>`}</div>`; })}
             <label class="ph-add">${icon('camera')}Take photo<input type="file" accept="image/*" capture="environment" data-up></label>
-            <label class="ph-add">${icon('upload')}Upload photos<input type="file" accept="image/*" multiple data-up></label></div>
-          <div id="dropz" class="dropz">${icon('upload')} <b>Drag photos here</b> <span class="muted">from a folder or the desktop</span></div>
-          ${!imgs.length ? html`<p class="muted small" style="margin:14px 0 0">No photos yet. You can add them later too.</p>` : ''}</section>${wizbar(w.prev, imgs.length ? 'Continue' : 'Skip for now')}`);
+            <label class="ph-add">${icon('upload')}Upload photos or videos<input type="file" accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.mp4,.m4v" multiple data-up></label></div>
+          <div id="dropz" class="dropz">${icon('upload')} <b>Drag photos or videos here</b> <span class="muted">from a folder or the desktop</span></div>
+          <p class="muted small" style="margin:12px 0 0">Videos: short clips (up to 50MB, MP4 or MOV) play on the product page.</p>
+          ${!nPhotos ? html`<p class="muted small" style="margin:8px 0 0">No photos yet. You can add them later too.</p>` : ''}</section>${wizbar(w.prev, imgs.length ? 'Continue' : 'Skip for now')}`);
+        $('#autow', el).onchange = e => { autoWhite = e.target.checked; try { localStorage.setItem('lk_white_bg', autoWhite ? '1' : '0'); } catch (er) { } };
         const uploadFiles = async files => {
-          files = files.filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif|gif)$/i.test(f.name));
-          if (!files.length) return S.toast('That is not a photo. Drag a JPG or PNG file.', { bad: true });
-          const grid = $('#ph', el); let pos = imgs.length ? Math.max(...imgs.map(x => x.position)) + 1 : 0, failed = [];
+          files = files.filter(f => isImg(f) || isVid(f));
+          if (!files.length) return S.toast('That is not a photo or video. Use JPG, PNG, MP4 or MOV.', { bad: true });
+          const grid = $('#ph', el); let pos = imgs.length ? Math.max(...imgs.map(x => x.position)) + 1 : 0, failed = [], whitened = 0;
           for (const f of files) {
-            const tile = document.createElement('div'); tile.className = 'ph-up'; tile.textContent = 'Uploading…'; grid.insertBefore(tile, grid.querySelector('.ph-add'));
+            const tile = document.createElement('div'); tile.className = 'ph-up'; tile.textContent = isVid(f) ? 'Uploading video…' : (autoWhite ? 'Whitening background…' : 'Uploading…'); grid.insertBefore(tile, grid.querySelector('.ph-add'));
             try {
-              const prep = await S.prepareImage(f); const path = `${prod.id}/${S.uuid()}.${prep.ext}`;
-              await S.upload('product-images', path, prep.blob, prep.type);
-              S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++ }));
+              if (isVid(f)) {
+                if (f.size > 50 * 1024 * 1024) throw new Error('Video is bigger than 50MB. Trim it or send a shorter clip.');
+                const ext = (f.name.split('.').pop() || 'mp4').toLowerCase().replace('m4v', 'mp4');
+                const type = f.type || (ext === 'mov' ? 'video/quicktime' : ext === 'webm' ? 'video/webm' : 'video/mp4');
+                const path = `${prod.id}/${S.uuid()}.${ext}`;
+                await S.upload('product-images', path, f, type);
+                S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++, media_type: 'video' }));
+              } else {
+                let prep = null;
+                if (autoWhite) { const r = await whiteBg(f).catch(() => null); if (r) { prep = { blob: r.blob, type: 'image/jpeg', ext: 'jpg' }; if (r.changed) whitened++; } }
+                if (!prep) prep = await S.prepareImage(f);
+                const path = `${prod.id}/${S.uuid()}.${prep.ext}`;
+                await S.upload('product-images', path, prep.blob, prep.type);
+                S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++ }));
+              }
             } catch (e) { failed.push(f.name + ': ' + S.friendly(e.message)); }
+            tile.textContent = 'Done';
           }
-          if (failed.length) S.toast('Some photos did not upload. ' + failed[0], { bad: true }); else S.toast(files.length + ' photo' + (files.length > 1 ? 's' : '') + ' added');
+          if (failed.length) S.toast('Some files did not upload. ' + failed[0], { bad: true });
+          else S.toast(files.length + ' file' + (files.length > 1 ? 's' : '') + ' added' + (whitened ? ` · ${whitened} background${whitened > 1 ? 's' : ''} made white` : ''));
           draw();
         };
         S.$$('[data-up]', el).forEach(inp => inp.onchange = () => { const files = [...inp.files]; inp.value = ''; if (files.length) uploadFiles(files); });
-        // Drag and drop anywhere on the photos card (stops the browser opening the photo instead)
+        // Drag and drop anywhere on the card (stops the browser opening the file instead)
         const card = el.querySelector('section.card'), dz = $('#dropz', el);
         const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
         card.addEventListener('dragenter', e => { if (hasFiles(e)) { e.preventDefault(); dz.classList.add('over'); } });
         card.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dz.classList.add('over'); } });
         card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) dz.classList.remove('over'); });
-        card.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const files = [...(e.dataTransfer.files || [])]; if (files.length) uploadFiles(files); else S.toast('Drag the photo file itself (from a folder or the desktop), not from a web page.', { bad: true }); });
+        card.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const files = [...(e.dataTransfer.files || [])]; if (files.length) uploadFiles(files); else S.toast('Drag the file itself (from a folder or the desktop), not from a web page.', { bad: true }); });
         S.on(el, '[data-prim]', 'click', (e, b) => S.act(b, async () => { S.must(await S.db.from('product_images').update({ is_primary: true }).eq('id', b.dataset.prim)); draw(); }, 'Main photo set').catch(() => {}));
         S.on(el, '[data-mv]', 'click', (e, b) => {
           const [id, d] = b.dataset.mv.split('|'); const k = imgs.findIndex(x => x.id === id); const o = imgs[k + +d]; if (!o) return;
           S.act(b, async () => { S.must(await S.db.from('product_images').update({ position: o.position }).eq('id', id)); S.must(await S.db.from('product_images').update({ position: imgs[k].position === o.position ? o.position + +d : imgs[k].position }).eq('id', o.id)); draw(); }).catch(() => {});
         });
         S.on(el, '[data-del]', 'click', async (e, b) => {
-          if (!(await S.confirm({ title: 'Remove this photo?', confirm: 'Remove', danger: true }))) return;
+          if (!(await S.confirm({ title: 'Remove this?', confirm: 'Remove', danger: true }))) return;
           const im = imgs.find(x => x.id === b.dataset.del);
-          S.act(b, async () => { S.must(await S.db.from('product_images').delete().eq('id', im.id)); await S.db.storage.from('product-images').remove([im.path]); draw(); }, 'Photo removed').catch(() => {});
+          S.act(b, async () => { S.must(await S.db.from('product_images').delete().eq('id', im.id)); await S.db.storage.from('product-images').remove([im.path]); draw(); }, 'Removed').catch(() => {});
+        });
+        S.on(el, '[data-white]', 'click', (e, b) => {
+          const im = imgs.find(x => x.id === b.dataset.white); if (!im) return;
+          S.act(b, async () => {
+            const res = await fetch(S.publicImg(im.path) + '?v=' + Date.now()); if (!res.ok) throw new Error('Could not open the photo');
+            const r = await whiteBg(await res.blob());
+            if (!r.changed) { S.toast('This background is already white.'); return; }
+            const path = `${prod.id}/${S.uuid()}.jpg`;
+            await S.upload('product-images', path, r.blob, 'image/jpeg');
+            S.must(await S.db.from('product_images').update({ path }).eq('id', im.id));
+            await S.db.storage.from('product-images').remove([im.path]);
+            draw();
+          }, 'Background made white').catch(() => {});
         });
         $('#nextb', el).onclick = w.next;
       };
@@ -229,10 +312,11 @@
         <label class="fld"><span>Description <em>(shown on the website, at least one full sentence)</em></span><textarea name="description" maxlength="4000" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
         <div class="flex" style="margin-top:-6px"><button class="btn sm" type="button" id="wdesc">${icon('sparkle')} Write it for me</button><button class="btn sm ghost" type="button" id="tidy">Tidy up spelling &amp; capitals</button></div>
         <label class="fld"><span>Internal notes <em>(team only)</em></span><textarea name="notes" maxlength="4000" style="min-height:80px">${prod.notes || ''}</textarea></label>
-        <label class="fld" style="max-width:280px"><span>Low stock warning at <em>(optional)</em></span><input name="low_stock_threshold" value="${prod.low_stock_threshold ?? ''}" inputmode="numeric" placeholder="e.g. 1"></label>
+        <div class="row" id="stockrow"><label class="fld"><span>How many in stock now?</span><input name="stock_now" value="${prod.quantity ?? 0}" inputmode="numeric" placeholder="e.g. 1"><small>Type the number you have right now. We record the change for you.</small></label>
+          <label class="fld"><span>Low stock warning at <em>(optional)</em></span><input name="low_stock_threshold" value="${prod.low_stock_threshold ?? ''}" inputmode="numeric" placeholder="e.g. 1"></label></div>
       </form></section>${wizbar(w.prev)}`);
       const f = $('#df', el);
-      const adapt = () => { const t = f.product_type.value; $('#jfields', el).hidden = t === 'service';
+      const adapt = () => { const t = f.product_type.value; $('#jfields', el).hidden = t === 'service'; $('#stockrow', el).hidden = t === 'service';
         $('#typehint', el).textContent = { stocked: 'We track stock, supplier and purchase cost.', one_off: 'A single piece: stock is 1 when bought.', bespoke: 'Made to order for a client; supplier optional.', in_house: 'Made in our workshop; record material costs.', service: 'No stock or supplier needed.' }[t]; };
       f.product_type.onchange = adapt; adapt();
       $('#sug', el).onclick = () => { const c = (f.category.value || 'LK').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase(); f.sku.value = 'LK-' + c + '-' + Math.random().toString(36).slice(2, 6).toUpperCase(); };
@@ -267,10 +351,17 @@
         if (!o.sku) f.sku.value = o.sku = 'LK-' + ((o.category || 'LK').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
         if (o.weight_g && isNaN(+o.weight_g)) return S.fieldErr(f, 'weight_g', 'Weight must be a number');
         if (o.low_stock_threshold && !/^\d+$/.test(o.low_stock_threshold)) return S.fieldErr(f, 'low_stock_threshold', 'Use a whole number');
+        if (o.product_type !== 'service' && !/^\d{1,5}$/.test(o.stock_now || '')) return S.fieldErr(f, 'stock_now', 'Type how many you have, e.g. 1 (or 0)');
         const upd = { name: o.name, category: o.category || null, subcategory: o.subcategory || null, product_type: o.product_type, sku: o.sku ? o.sku.toUpperCase() : null,
           metal: o.metal || null, gemstone: o.gemstone || null, material: o.material || null, weight_g: o.weight_g ? +o.weight_g : null, dimensions: o.dimensions || null,
           description: o.description || '', notes: o.notes || null, low_stock_threshold: o.low_stock_threshold ? +o.low_stock_threshold : null };
-        S.act(e.currentTarget, async () => { S.must(await S.db.from('products').update(upd).eq('id', prod.id)); w.next(); }, 'Details saved').catch(() => {});
+        S.act(e.currentTarget, async () => { S.must(await S.db.from('products').update(upd).eq('id', prod.id));
+          if (o.product_type !== 'service') {
+            const cur = S.must(await S.db.from('products').select('quantity').eq('id', prod.id).single()).quantity || 0, want = +o.stock_now, diff = want - cur;
+            if (diff) { const { count } = await S.db.from('stock_movements').select('id', { count: 'exact', head: true }).eq('product_id', prod.id);
+              S.must(await S.db.from('stock_movements').insert({ product_id: prod.id, change: diff, reason: count ? 'adjustment' : 'opening', note: 'Stock set to ' + want + ' when adding product', created_by: S.user.id })); }
+          }
+          w.next(); }, 'Details saved').catch(() => {});
       };
     },
     // ---------- 3. supplier, invoice / receipt, OCR, stock
@@ -409,6 +500,7 @@
     if (!live()) return;
     if (!prod || prod.deleted_at) return S.render(v, S.empty({ icon: 'gem', title: 'Product not found', action: html`<a class="btn" href="#/products">All products</a>` }));
     const k = S.costing(prod, costs, vat); const owner = S.isOwner(); const st = prod.status;
+    const pics = imgs.filter(x => x.media_type !== 'video'), vids = imgs.filter(x => x.media_type === 'video');
     const lastChange = notes.find(n => n.action === 'request_changes');
     const webUrl = S.siteUrl + '/item.html?s=' + encodeURIComponent(prod.slug);
     const acts = [];
@@ -424,9 +516,10 @@
       ${st === 'changes_requested' && lastChange ? S.banner('warn', 'Changes requested by the admin', html`<p class="pre" style="margin:4px 0 0">${lastChange.note}</p><span class="tiny">${dateTime(lastChange.created_at)}</span>`) : ''}
       ${st === 'published' ? S.banner('good', 'Live on the website', html`Published ${dateTime(prod.published_at)}. <a href="${webUrl}" target="_blank" rel="noopener">Open the product page</a>`) : ''}
       <div class="split"><div class="stack">
-        <section class="card">${imgs.length ? html`<div class="gallery"><img src="${S.publicImg((imgs.find(x => x.is_primary) || imgs[0]).path)}" alt="${prod.name}"><div class="rest">${imgs.filter(x => !x.is_primary).slice(0, 4).map(x => html`<img src="${S.publicImg(x.path)}" alt="" loading="lazy">`)}</div></div>`
+        <section class="card">${pics.length ? html`<div class="gallery"><img src="${S.publicImg((pics.find(x => x.is_primary) || pics[0]).path)}" alt="${prod.name}"><div class="rest">${pics.filter(x => !x.is_primary).slice(0, 4).map(x => html`<img src="${S.publicImg(x.path)}" alt="" loading="lazy">`)}</div></div>`
           : S.empty({ icon: 'camera', title: 'No photos yet', action: html`<a class="btn" href="#/products/${prod.id}/edit?step=photos">Add photos</a>` })}
-          <div class="row-between" style="margin-top:12px"><span class="muted small">${imgs.length} photo${imgs.length === 1 ? '' : 's'}</span><a class="btn sm" href="#/products/${prod.id}/edit?step=photos">Manage photos</a></div></section>
+          ${vids.length ? html`<div class="vids">${vids.map(x => html`<video src="${S.publicImg(x.path)}#t=0.1" controls muted playsinline preload="metadata"></video>`)}</div>` : ''}
+          <div class="row-between" style="margin-top:12px"><span class="muted small">${pics.length} photo${pics.length === 1 ? '' : 's'}${vids.length ? ` · ${vids.length} video${vids.length === 1 ? '' : 's'}` : ''}</span><a class="btn sm" href="#/products/${prod.id}/edit?step=photos">Manage photos</a></div></section>
         <section class="card"><div class="ch"><h2>Details</h2><a class="btn sm" href="#/products/${prod.id}/edit?step=details">Edit</a></div>
           ${S.kv([['Category', [prod.category, prod.subcategory].filter(Boolean).join(' › ')], ['Type', (TYPES.find(t => t[0] === prod.product_type) || [, ''])[1]], ['Metal', prod.metal], ['Gemstone', prod.gemstone], ['Material', prod.material],
             ['Weight', prod.weight_g ? prod.weight_g + ' g' : ''], ['Size', prod.dimensions], ['SKU', prod.sku]])}
@@ -484,7 +577,7 @@
       ${block ? S.banner('bad', 'Incomplete: cannot be approved yet', html`<ul>${issues.blocking.map(x => html`<li>${x}</li>`)}</ul>`) : S.banner('good', 'Complete', 'All required information is present.')}
       ${issues.warnings.length ? S.banner('warn', 'Please check', html`<ul>${issues.warnings.map(x => html`<li>${x}</li>`)}</ul>`) : ''}
       <div class="split" style="padding-bottom:90px"><div class="stack">
-        <section class="card">${imgs.length ? html`<div class="photos">${imgs.map(im => html`<div class="ph-item ${im.is_primary ? 'primary' : ''}"><img src="${S.publicImg(im.path)}" alt="">${im.is_primary ? raw('<span class="lbl">Main</span>') : ''}</div>`)}</div>` : S.banner('bad', 'No photos', '')}</section>
+        <section class="card">${imgs.length ? html`<div class="photos">${imgs.map(im => im.media_type === 'video' ? html`<div class="ph-item"><video src="${S.publicImg(im.path)}#t=0.1" controls muted playsinline preload="metadata"></video><span class="lbl vid">Video</span></div>` : html`<div class="ph-item ${im.is_primary ? 'primary' : ''}"><img src="${S.publicImg(im.path)}" alt="">${im.is_primary ? raw('<span class="lbl">Main</span>') : ''}</div>`)}</div>` : S.banner('bad', 'No photos', '')}</section>
         <section class="card"><h2>${p2.name}</h2>${S.kv([['SKU', p2.sku], ['Category', [p2.category, p2.subcategory].filter(Boolean).join(' › ')], ['Type', S.label(p2.product_type)], ['Metal', p2.metal], ['Gemstone', p2.gemstone], ['Weight', p2.weight_g ? p2.weight_g + ' g' : ''], ['Size', p2.dimensions], ['Stock', String(p2.quantity)]])}
           <div class="hr"></div><div class="tiny muted" style="letter-spacing:.14em;text-transform:uppercase">Website description</div><p class="pre">${p2.description || '—'}</p>
           ${p2.notes ? html`<div class="tiny muted" style="letter-spacing:.14em;text-transform:uppercase">Internal notes</div><p class="pre">${p2.notes}</p>` : ''}</section>
