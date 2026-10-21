@@ -23,12 +23,13 @@
       const details = [['Metal', p.metal], ['Stone', p.gemstone], ['Material', p.material]].filter(x => x[1]);
       root.innerHTML = `<div class="item"><div><img id="mainimg" src="${esc(LK.productImage(imgs[0]))}" alt="${esc(p.name)}" width="800" height="800">
         ${imgs.length > 1 ? `<div class="thumbs-row">${imgs.map((im, i) => `<button type="button" data-i="${i}" aria-label="Photo ${i + 1}"><img src="${esc(LK.productImage(im))}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
-        ${(p.videos || []).map(v => `<video class="item-video" src="${esc(LK.productImage(v))}" controls muted playsinline loop preload="metadata"></video>`).join('')}</div>
+        ${(p.videos || []).map(v => `<video class="item-video" src="${esc(LK.productImage(v))}" autoplay muted playsinline loop preload="auto" disablepictureinpicture disableremoteplayback></video>`).join('')}</div>
         <div><span class="label">${esc(p.category || '')}</span><h1>${esc(p.name)}</h1><p class="price">${price(p)}</p>
         <p class="desc">${esc(p.description).replace(/\n/g, '<br>')}</p>
         ${details.length ? `<dl class="spec">${details.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
         ${p.available ? '' : '<p class="muted">Currently sold out. Ask us about making one for you.</p>'}
         ${p.buy_url && p.available ? `<a class="btn solid" href="${esc(p.buy_url)}" rel="noopener">Buy now</a> ` : ''}<a class="btn${p.buy_url && p.available ? '' : ' solid'}" href="contact?enquire=${encodeURIComponent(p.name + (p.sku ? ' (' + p.sku + ')' : ''))}">Enquire about this piece</a></div></div>`;
+      root.querySelectorAll('video.item-video').forEach(v => { v.muted = true; v.defaultMuted = true; const go = () => v.play().catch(() => {}); go(); v.addEventListener('canplay', go, { once: true }); });
       root.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { $('#mainimg').src = LK.productImage(imgs[+b.dataset.i]); });
     });
   }

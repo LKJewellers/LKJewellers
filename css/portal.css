@@ -97,4 +97,4 @@ tbody tr[data-id]{cursor:pointer}tbody tr[data-id]:hover{background:var(--pearl)
 .spec{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;margin:0 0 22px}.spec dt{color:var(--muted)}.spec dd{margin:0}
 @media(max-width:640px){.form-grid{grid-template-columns:1fr}.pcard{padding:16px}.ptbl{font-size:.88rem}.pact .btn{flex:1;text-align:center}}
 
-.item-video{display:block;width:100%;margin-top:12px;border-radius:2px;background:#f4f4f2}
+.item-video{display:block;width:100%;margin-top:12px;border-radius:2px;background:#fff;pointer-events:none}
