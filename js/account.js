@@ -16,7 +16,7 @@
 
   // ======================= SIGN IN / JOIN / FORGOT =======================
   if (page === 'auth') {
-    LK.session().then(s => { if (s) location.replace('portal.html'); });
+    LK.session().then(s => { if (s) location.replace('portal'); });
     $$('.tabs button, [data-go]').forEach(b => b.addEventListener('click', () => showPanel(b.dataset.p || b.dataset.go)));
     showPanel(location.hash === '#join' ? 'join' : location.hash === '#forgot' ? 'forgot' : 'signin');
     if (new URLSearchParams(location.search).get('deleted')) msg($('#signin-msg'), 'Your account has been deleted.');
@@ -30,7 +30,7 @@
         if (/banned/i.test(error.message)) return msg(out, 'This account has been disabled. Please contact LK Jewellers.', true);
         return msg(out, /Invalid login/i.test(error.message) ? 'That email and password do not match.' : friendly(error.message), true);
       }
-      location.href = 'portal.html';
+      location.href = 'portal';
     });
     $('#resend').addEventListener('click', async () => {
       const email = $('#signin-form').email.value.trim().toLowerCase(); if (!LK.validEmail(email)) return msg($('#signin-msg'), 'Enter your email address above first.', true);
@@ -75,7 +75,7 @@
       if (f.password.value !== f.password2.value) return msg(out, 'The two passwords do not match.', true);
       const { error } = await busy($('button[type=submit]', f), () => db.auth.updateUser({ password: f.password.value }));
       if (error) return msg(out, friendly(error.message), true);
-      msg(out, 'Password saved. Opening your account…'); setTimeout(() => (location.href = 'portal.html'), 900);
+      msg(out, 'Password saved. Opening your account…'); setTimeout(() => (location.href = 'portal'), 900);
     });
   })();
 
@@ -102,7 +102,7 @@
         ${openQ.length ? `<h3>Waiting for you</h3>${openQ.map(q => `<a class="prow" href="#quotes"><span><b>Quote ${esc(q.number)}</b>${q.title ? ' · ' + esc(q.title) : ''}<br><small>Valid until ${date(q.expiry_date)}</small></span><span>${money(q.total_pence)}</span></a>`).join('')}` : ''}
         ${due.length ? due.map(i => `<a class="prow" href="#invoices"><span><b>Invoice ${esc(i.number)}</b><br><small>Due ${date(i.due_date)}</small></span><span>${money(i.total_pence - i.amount_paid_pence)} ${pill(i.status)}</span></a>`).join('') : ''}
         <h3>Recent messages</h3>${D.communications.slice(0, 5).map(m => `<div class="prow"><span>${esc(m.summary)}</span><small>${date(m.created_at)}</small></div>`).join('') || empty('Nothing yet')}
-        <p style="margin-top:22px"><a class="btn solid" href="#designs">Share a design or inspiration</a> <a class="btn" href="../contact.html">Contact us</a></p>`;
+        <p style="margin-top:22px"><a class="btn solid" href="#designs">Share a design or inspiration</a> <a class="btn" href="../contact">Contact us</a></p>`;
     },
     quotes() {
       return D.quotes.length ? D.quotes.map(q => `<article class="pcard" data-quote="${q.id}"><div class="pch"><div><h3>Quote ${esc(q.number)}</h3><small>${esc(q.title || '')} · ${date(q.issue_date)} · valid until ${date(q.expiry_date)}</small></div>${pill(q.status)}</div>
@@ -149,7 +149,7 @@
         <label>Town / city<input name="city" value="${esc(p.city || '')}" maxlength="80"></label><label>County<input name="county" value="${esc(p.county || '')}" maxlength="80"></label>
         <label>Postcode<input name="postcode" value="${esc(p.postcode || '')}" maxlength="12"></label><label>Country<input name="country" value="${esc(p.country || 'United Kingdom')}" maxlength="60"></label>
         <label class="check full"><input type="checkbox" name="marketing_consent" ${p.marketing_consent ? 'checked' : ''}><span>Send me news and offers</span></label>
-        <div class="full"><button class="btn solid" type="submit">Save</button> <a class="btn" href="reset.html">Change password</a></div><p class="msg full" id="profile-msg" hidden></p></form>`;
+        <div class="full"><button class="btn solid" type="submit">Save</button> <a class="btn" href="reset">Change password</a></div><p class="msg full" id="profile-msg" hidden></p></form>`;
     },
     points() {
       const L = D.loyalty;
@@ -218,7 +218,7 @@
     const df = $('#delete-form', body); if (df) df.onsubmit = async e => { e.preventDefault(); const out = $('#delete-msg');
       if (e.target.confirm.value.trim() !== 'DELETE') return msg(out, 'Type DELETE in capital letters to confirm.', true);
       const { error } = await db.rpc('delete_my_account'); if (error) return msg(out, error.message, true);
-      await db.auth.signOut(); location.href = 'index.html?deleted=1'; };
+      await db.auth.signOut(); location.href = './?deleted=1'; };
   }
   const failed = [];
   async function upload(files) {
@@ -246,18 +246,18 @@
 
   (async () => {
     const { data: { session } } = await db.auth.getSession();
-    if (!session) return location.replace('index.html');
+    if (!session) return location.replace('./');
     const act = await db.rpc('portal_activate');
     if (act.error) {
-      root.innerHTML = `<div class="notice"><b>${esc(act.error.message)}</b><p>If you think this is a mistake, please <a href="../contact.html">contact us</a>.</p><button class="btn" id="so">Sign out</button></div>`;
-      $('#so').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; }; return;
+      root.innerHTML = `<div class="notice"><b>${esc(act.error.message)}</b><p>If you think this is a mistake, please <a href="../contact">contact us</a>.</p><button class="btn" id="so">Sign out</button></div>`;
+      $('#so').onclick = async () => { await db.auth.signOut(); location.href = './'; }; return;
     }
     me = act.data;
     if (!me.welcomed && LK.workerReady) LK.worker('/notify/welcome', {}).catch(() => {});
     try { await load(); } catch (e) { root.innerHTML = `<div class="notice">We could not load your account: ${esc(friendly(e.message))} <button class="btn" onclick="location.reload()">Try again</button></div>`; return; }
     $('#welcome').textContent = me.first_name ? 'Welcome back, ' + me.first_name : 'Welcome back';
     if (me.first_time) $('#welcome').textContent = 'Welcome' + (me.first_name ? ', ' + me.first_name : '');
-    $('#signout').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
+    $('#signout').onclick = async () => { await db.auth.signOut(); location.href = './'; };
     $('#pshell').hidden = false; $('#ploading').hidden = true;
     // Fresh data each time a section is opened, so statuses (paid, accepted…) are always current.
     addEventListener('hashchange', async () => { try { await load(); } catch (e) { /* keep last good data */ } draw(); scrollTo({ top: $('#ptabs').offsetTop - 100 }); });

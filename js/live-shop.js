@@ -27,7 +27,7 @@
     if (limit) rows = rows.slice(0, limit);
     var grid = document.querySelector('main .grid'); if (!grid || !rows.length) return;
     var htmlCards = rows.map(function (p) {
-      var url = 'item.html?s=' + encodeURIComponent(p.slug);
+      var url = 'item?s=' + encodeURIComponent(p.slug);
       return '<article class="prod rv in live"><div class="gal"><div class="frame gal-main"><a href="' + url + '" tabindex="-1" aria-hidden="true">' +
         '<img src="' + esc(img(p.image_path)) + '" alt="' + esc(p.name) + '" width="1000" height="1000" loading="lazy" decoding="async"></a></div></div>' +
         '<div class="body"><h3><a href="' + url + '">' + esc(p.name) + '</a></h3><p>' + esc(first(p.description)) + '</p>' +

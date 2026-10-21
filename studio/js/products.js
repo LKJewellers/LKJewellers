@@ -502,7 +502,7 @@
     const k = S.costing(prod, costs, vat); const owner = S.isOwner(); const st = prod.status;
     const pics = imgs.filter(x => x.media_type !== 'video'), vids = imgs.filter(x => x.media_type === 'video');
     const lastChange = notes.find(n => n.action === 'request_changes');
-    const webUrl = S.siteUrl + '/item.html?s=' + encodeURIComponent(prod.slug);
+    const webUrl = S.siteUrl + '/item?s=' + encodeURIComponent(prod.slug);
     const acts = [];
     if (!['approved', 'published', 'unpublished'].includes(st) || owner) acts.push(html`<a class="btn" href="#/products/${prod.id}/edit?step=details">${icon('edit')} Edit</a>`);
     if (['draft', 'changes_requested', 'rejected'].includes(st)) acts.push(html`<a class="btn gold" href="#/products/${prod.id}/edit?step=review">${icon('send')} Submit for review</a>`);

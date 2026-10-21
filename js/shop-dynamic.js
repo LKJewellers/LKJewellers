@@ -1,13 +1,13 @@
-/* Live products published from LK Studio: latest.html (grid) and item.html?s=slug (detail).
+/* Live products published from LK Studio: latest (grid) and item?s=slug (detail).
    Reads only the public website_products feed: published pieces, customer-facing fields. */
 (function () {
   const { $, esc, money } = LK, root = $('#app');
   if (!LK.configured) { root.innerHTML = '<p class="muted center">Our latest pieces will appear here soon.</p>'; return; }
   const price = p => p.price_pence != null ? money(p.price_pence) : 'Price on request';
-  const card = p => `<article class="prod"><a class="art" href="item.html?s=${encodeURIComponent(p.slug)}">
+  const card = p => `<article class="prod"><a class="art" href="item?s=${encodeURIComponent(p.slug)}">
     <img src="${esc(LK.productImage(p.image_path))}" alt="${esc(p.name)}" loading="lazy" width="600" height="600"></a>
-    <div class="info"><h3><a href="item.html?s=${encodeURIComponent(p.slug)}">${esc(p.name)}</a></h3><p class="price">${price(p)}</p>
-    ${p.buy_url ? `<a class="btn sm solid" href="${esc(p.buy_url)}" rel="noopener">Buy now</a>` : `<a class="btn sm" href="item.html?s=${encodeURIComponent(p.slug)}">View</a>`}</div></article>`;
+    <div class="info"><h3><a href="item?s=${encodeURIComponent(p.slug)}">${esc(p.name)}</a></h3><p class="price">${price(p)}</p>
+    ${p.buy_url ? `<a class="btn sm solid" href="${esc(p.buy_url)}" rel="noopener">Buy now</a>` : `<a class="btn sm" href="item?s=${encodeURIComponent(p.slug)}">View</a>`}</div></article>`;
 
   if (document.body.dataset.page === 'latest') {
     LK.db.from('website_products').select('*').order('published_at', { ascending: false }).then(({ data, error }) => {
@@ -17,7 +17,7 @@
   } else {
     const slug = new URLSearchParams(location.search).get('s') || '';
     LK.db.from('website_products').select('*').eq('slug', slug).maybeSingle().then(({ data: p }) => {
-      if (!p) { root.innerHTML = '<p class="muted center">We could not find that piece. <a href="latest.html">See what is new</a>.</p>'; return; }
+      if (!p) { root.innerHTML = '<p class="muted center">We could not find that piece. <a href="latest">See what is new</a>.</p>'; return; }
       document.title = p.name + ' | LK Jewellers London';
       const imgs = (p.images || []).length ? p.images : [p.image_path];
       const details = [['Metal', p.metal], ['Stone', p.gemstone], ['Material', p.material]].filter(x => x[1]);
@@ -28,7 +28,7 @@
         <p class="desc">${esc(p.description).replace(/\n/g, '<br>')}</p>
         ${details.length ? `<dl class="spec">${details.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
         ${p.available ? '' : '<p class="muted">Currently sold out. Ask us about making one for you.</p>'}
-        ${p.buy_url && p.available ? `<a class="btn solid" href="${esc(p.buy_url)}" rel="noopener">Buy now</a> ` : ''}<a class="btn${p.buy_url && p.available ? '' : ' solid'}" href="contact.html?enquire=${encodeURIComponent(p.name + (p.sku ? ' (' + p.sku + ')' : ''))}">Enquire about this piece</a></div></div>`;
+        ${p.buy_url && p.available ? `<a class="btn solid" href="${esc(p.buy_url)}" rel="noopener">Buy now</a> ` : ''}<a class="btn${p.buy_url && p.available ? '' : ' solid'}" href="contact?enquire=${encodeURIComponent(p.name + (p.sku ? ' (' + p.sku + ')' : ''))}">Enquire about this piece</a></div></div>`;
       root.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { $('#mainimg').src = LK.productImage(imgs[+b.dataset.i]); });
     });
   }

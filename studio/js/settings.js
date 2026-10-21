@@ -116,7 +116,7 @@
       const cur = Object.fromEntries(rows.map(r => [r.key, typeof r.value === 'string' ? r.value : '']));
       S.render(el, html`<section class="card" style="max-width:760px"><h2>Website text</h2><p class="muted small">Change the wording on the homepage. Leave a box empty to keep the original text. Products are published from the Products screen.</p>
         <form class="form" id="wf">${KEYS.map(([k, l, h]) => html`<label class="fld"><span>${l}</span><textarea name="${k}" maxlength="600" style="min-height:70px" placeholder="Original text is used when empty">${cur[k] || ''}</textarea>${h ? html`<small>${h}</small>` : ''}</label>`)}</form>
-        <div class="flex" style="justify-content:flex-end"><a class="btn" href="../index.html" target="_blank" rel="noopener">${icon('external')} View homepage</a><button class="btn gold" id="sv">Save</button></div></section>`);
+        <div class="flex" style="justify-content:flex-end"><a class="btn" href="../" target="_blank" rel="noopener">${icon('external')} View homepage</a><button class="btn gold" id="sv">Save</button></div></section>`);
       $('#sv', el).onclick = e => { const o = S.form($('#wf', el));
         S.act(e.currentTarget, async () => { const up = KEYS.filter(([k]) => o[k]).map(([k]) => ({ key: k, value: o[k], is_public: true, updated_at: new Date().toISOString() }));
           const clear = KEYS.filter(([k]) => !o[k]).map(([k]) => k);

@@ -308,7 +308,7 @@
         <div class="top" id="top"><a class="mark mobile-brand" href="#/"><b>LK <span>Studio</span></b><small>London</small></a>
           <button class="searchbox" id="openSearch" type="button" aria-label="Search everything">${S.icon('search')}<span>Search customers, products, orders…</span><kbd>/</kbd></button>
           <button class="iconbtn" id="bell" aria-label="Notifications">${S.icon('bell')}<i class="dot" id="belldot" hidden></i></button>
-          <a class="iconbtn" href="../index.html" target="_blank" rel="noopener" title="View website" aria-label="View website">${S.icon('external')}</a></div>
+          <a class="iconbtn" href="../" target="_blank" rel="noopener" title="View website" aria-label="View website">${S.icon('external')}</a></div>
         <main class="view" id="view" tabindex="-1"></main>
       </div>
       <nav class="bottom" aria-label="Quick">
@@ -393,7 +393,7 @@
   function noAccess(email) {
     authFrame(S.html`<h1>No access</h1><p class="lead">${email} is not a member of the LK Jewellers team. LK Studio is private.</p>
       <p class="muted small">Customers can sign in to their own account on the website instead.</p>
-      <div class="flex"><a class="btn" href="../account/index.html">Customer account</a><button class="btn gold" id="so">Sign out</button></div>`);
+      <div class="flex"><a class="btn" href="../account/">Customer account</a><button class="btn gold" id="so">Sign out</button></div>`);
     S.$('#so').onclick = async () => { await S.db.auth.signOut(); loginScreen(); };
   }
 

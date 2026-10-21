@@ -113,7 +113,7 @@
   // ---------- More (mobile) ----------
   S.route('/more', v => {
     S.render(v, html`${S.page({ title: 'More' })}<div class="more-grid">${S.navItems().filter(n => n[0] && !['customers', 'products', 'orders'].includes(n[0])).map(n => html`<a href="#/${n[0]}">${icon(n[2])}${n[1]}</a>`)}
-      <a href="#/notifications">${icon('bell')}Notifications</a><a href="../index.html" target="_blank" rel="noopener">${icon('external')}Website</a></div>
+      <a href="#/notifications">${icon('bell')}Notifications</a><a href="../" target="_blank" rel="noopener">${icon('external')}Website</a></div>
       <div class="card flat" style="margin-top:18px"><div class="row-between"><div class="flex"><span class="avatar">${S.initials(S.me.full_name)}</span><div><div>${S.me.full_name}</div><div class="tiny muted">${S.me.email} · ${S.me.role === 'owner' ? 'Admin' : 'Team'}</div></div></div>
       <button class="btn sm" id="so2">${icon('logout')} Sign out</button></div></div>`);
     $('#so2', v).onclick = () => $('#signout').click();

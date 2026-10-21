@@ -44,13 +44,13 @@ function showPhoto(x,n){
 gals.forEach(x=>x.btns.forEach((b,n)=>b.addEventListener('click',()=>{if(n!==x.i)showPhoto(x,n)})));
 if(gals.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches)
   setInterval(()=>{if(!document.hidden)gals.forEach(x=>showPhoto(x,(x.i+1)%x.btns.length))},4500);
-// Contact form: posts to Formspree (set your ID in contact.html)
+// Contact form: posts to Formspree (set your ID in contact)
 const form=document.getElementById('contact-form');
 if(form)form.addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('note');
   try{const r=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{Accept:'application/json'}});if(!r.ok)throw 0;form.reset();n.textContent='Thank you. We will reply within one working day.'}
   catch{n.textContent='Message not sent. Please email sales@lkjewellers.co.uk instead.'}});
 // "Add to cart" is visual only for now: it just confirms the click
 document.querySelectorAll('.add').forEach(b=>b.addEventListener('click',()=>{b.textContent='Added';b.classList.add('added');setTimeout(()=>{b.textContent='Add to cart';b.classList.remove('added')},1800)}));
-// "Enquire" links use contact.html?enquire=Product+name; this pre-fills the message box
+// "Enquire" links use contact?enquire=Product+name; this pre-fills the message box
 const q=new URLSearchParams(location.search).get('enquire'),msg=document.querySelector('textarea[name=message]');
 if(q&&msg)msg.value='I would like to enquire about: '+q;

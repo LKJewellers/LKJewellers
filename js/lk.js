@@ -43,7 +43,7 @@
     }
     return null;
   };
-  LK.signOut = async () => { await LK.db.auth.signOut(); location.href = LK.base + 'account/index.html'; };
+  LK.signOut = async () => { await LK.db.auth.signOut(); location.href = LK.base + 'account/'; };
 
   // ---- call the Cloudflare Worker with the signed-in user's token
   LK.worker = async (path, body) => {
