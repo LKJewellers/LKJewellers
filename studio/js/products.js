@@ -319,7 +319,7 @@
         <label class="fld"><span>Description <em>(shown on the website, at least one full sentence)</em></span><textarea name="description" maxlength="4000" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
         <div class="flex" style="margin-top:-6px"><button class="btn sm" type="button" id="wdesc">${icon('sparkle')} Write it for me</button><button class="btn sm ghost" type="button" id="tidy">Tidy up spelling &amp; capitals</button></div>
         <label class="fld"><span>Internal notes <em>(team only)</em></span><textarea name="notes" maxlength="4000" style="min-height:80px">${prod.notes || ''}</textarea></label>
-        <div class="row" id="stockrow"><label class="fld"><span>How many in stock now?</span><input name="stock_now" value="${prod.quantity ?? 0}" inputmode="numeric" placeholder="e.g. 1"><small>Type the number you have right now. We record the change for you.</small></label>
+        <div class="row" id="stockrow"><label class="fld"><span>How many in stock now? <em style="color:var(--rose-d)">(required)</em></span><input name="stock_now" value="${prod.quantity > 0 ? prod.quantity : ''}" inputmode="numeric" placeholder="e.g. 1" required><small>Type the number you have right now. We record the change for you.</small></label>
           <label class="fld"><span>Low stock warning at <em>(optional)</em></span><input name="low_stock_threshold" value="${prod.low_stock_threshold ?? ''}" inputmode="numeric" placeholder="e.g. 1"></label></div>
       </form></section>${wizbar(w.prev)}`);
       const f = $('#df', el);
@@ -358,7 +358,7 @@
         if (!o.sku) f.sku.value = o.sku = 'LK-' + ((o.category || 'LK').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
         if (o.weight_g && isNaN(+o.weight_g)) return S.fieldErr(f, 'weight_g', 'Weight must be a number');
         if (o.low_stock_threshold && !/^\d+$/.test(o.low_stock_threshold)) return S.fieldErr(f, 'low_stock_threshold', 'Use a whole number');
-        if (o.product_type !== 'service' && !/^\d{1,5}$/.test(o.stock_now || '')) return S.fieldErr(f, 'stock_now', 'Type how many you have, e.g. 1 (or 0)');
+        if (o.product_type !== 'service' && (!/^\d{1,5}$/.test(o.stock_now || '') || +o.stock_now < 1)) { S.toast('Put in how many are in stock before you carry on.', { bad: true }); return S.fieldErr(f, 'stock_now', 'You must put in how many are in stock (1 or more)'); }
         const upd = { name: o.name, category: o.category || null, subcategory: o.subcategory || null, product_type: o.product_type, sku: o.sku ? o.sku.toUpperCase() : null,
           metal: o.metal || null, gemstone: o.gemstone || null, material: o.material || null, weight_g: o.weight_g ? +o.weight_g : null, dimensions: o.dimensions || null,
           description: o.description || '', notes: o.notes || null, low_stock_threshold: o.low_stock_threshold ? +o.low_stock_threshold : null };
