@@ -150,6 +150,30 @@
     return { blob: await toJpeg(), changed: true };
   };
 
+  // ---------- metal & diamond options (same maths as the database's variant_list) ----------
+  const METALS = ['9ct Yellow Gold', '9ct White Gold', '9ct Rose Gold', '14ct Yellow Gold', '14ct White Gold', '14ct Rose Gold', '18ct Yellow Gold', '18ct White Gold', '18ct Rose Gold', 'Platinum'];
+  const DIAMOND_MARKUP = 30;
+  const normMetal = m => { const t = String(m || '').trim(); return METALS.find(x => x.toLowerCase() === t.toLowerCase()) || t || '18ct White Gold'; };
+  const metalOrder = keys => [...keys].sort((a, b) => (METALS.indexOf(a) + 1 || 0) - (METALS.indexOf(b) + 1 || 0) || a.localeCompare(b));
+  const addDiamond = (cost, mk) => cost == null ? 0 : Math.round(cost * (1 + mk / 100) / 100) * 100;
+  S.variantsFor = p => {
+    const o = p.options || {}, mk = o.markup_pct == null ? DIAMOND_MARKUP : +o.markup_pct;
+    if (!o.metals) return [{ metal: p.metal || '', diamond: 'natural', price_pence: p.selling_price_pence, is_default: true }];
+    const nat = o.diamonds && o.diamonds.natural != null ? +o.diamonds.natural : null, lab = o.diamonds && o.diamonds.lab != null ? +o.diamonds.lab : null;
+    const out = [];
+    metalOrder(Object.keys(o.metals)).forEach(m => { const mp = o.metals[m] == null ? null : +o.metals[m];
+      out.push({ metal: m, diamond: 'natural', is_default: m === o.default_metal, price_pence: mp == null ? null : mp + addDiamond(nat, mk) });
+      if (o.diamond_choice !== false) out.push({ metal: m, diamond: 'lab', is_default: false, price_pence: mp == null || lab == null ? null : mp + addDiamond(lab, mk) }); });
+    return out;
+  };
+  S.optionsTable = p => {
+    const vs = S.variantsFor(p), metals = [...new Set(vs.map(v => v.metal))], dch = vs.some(v => v.diamond === 'lab');
+    const cell = v => v && v.price_pence ? html`<b>${money(v.price_pence)}</b>` : html`<span class="muted">On enquiry</span>`;
+    return html`<table class="opttab"><thead><tr><th>Metal</th><th>${dch ? 'Natural diamond' : 'Price'}</th>${dch ? html`<th>Lab-grown diamond</th>` : ''}</tr></thead><tbody>
+      ${metals.map(m => html`<tr class="${vs.find(v => v.metal === m && v.is_default) ? 'main' : ''}"><td>${m}${vs.find(v => v.metal === m && v.is_default) ? raw(' <span class="tag">Main</span>') : ''}</td>
+        <td>${cell(vs.find(v => v.metal === m && v.diamond === 'natural'))}</td>${dch ? html`<td>${cell(vs.find(v => v.metal === m && v.diamond === 'lab'))}</td>` : ''}</tr>`)}</tbody></table>`;
+  };
+
   const productThumb = p => { const im = (p.product_images || []).filter(x => x.media_type !== 'video').sort((a, b) => (b.is_primary - a.is_primary) || a.position - b.position)[0]; return im ? S.publicImg(im.path) : ''; };
 
   // =========================== LIST ===========================
@@ -405,7 +429,7 @@
           <div class="row3"><label class="fld"><span>Metal <em class="req">*</em></span><input name="metal" value="${prod.metal || ''}" maxlength="60" placeholder="e.g. 18ct white gold" list="metals"></label>
             <label class="fld"><span>Gemstone <em class="req">*</em></span><input name="gemstone" value="${prod.gemstone || ''}" maxlength="120" placeholder="e.g. 1.20ct oval diamond, G VS1"></label>
             <label class="fld"><span>Other material <em>(optional)</em></span><input name="material" value="${prod.material || ''}" maxlength="80"></label></div>
-          <datalist id="metals"><option>18ct yellow gold</option><option>18ct white gold</option><option>18ct rose gold</option><option>9ct yellow gold</option><option>Platinum</option><option>Sterling silver</option></datalist>
+          <datalist id="metals">${METALS.map(m => html`<option>${m}</option>`)}<option>Sterling Silver</option></datalist>
           <div class="row"><label class="fld"><span>Weight (g) <em>(if known)</em></span><input name="weight_g" value="${prod.weight_g ?? ''}" inputmode="decimal"></label>
             <label class="fld"><span>Size / dimensions <em>(if relevant)</em></span><input name="dimensions" value="${prod.dimensions || ''}" maxlength="80" placeholder="e.g. Ring size L, 2.2mm band"></label></div></div>
         <label class="fld"><span>Description <em class="req">*</em> <em>(shown on the website, at least one full sentence)</em></span><textarea name="description" maxlength="4000" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Describe the piece: stone, setting, finish, how it feels to wear.">${prod.description}</textarea></label>
@@ -559,27 +583,65 @@
     async price(el, prod, w) {
       const [p2, costs, vat, rules] = await Promise.all([S.db.from('products').select('*').eq('id', prod.id).single().then(S.must), S.db.from('product_costs').select('*').eq('product_id', prod.id).then(S.must), S.settings('vat'), S.settings('pricing_rules')]);
       const target = (rules && rules.categories && rules.categories[p2.category]) || (rules && rules.default_margin_pct) || 55;
+      const o = p2.options || {}, main = normMetal(p2.metal || o.default_metal), mk = o.markup_pct == null ? DIAMOND_MARKUP : +o.markup_pct;
+      const oldMetals = o.metals || {};
+      const metalList = metalOrder(new Set([main, ...METALS]));
+      const offered = m => o.metals ? Object.prototype.hasOwnProperty.call(oldMetals, m) || m === main : true;
+      const mainPrice = oldMetals[main] != null ? oldMetals[main] : (o.metals ? null : p2.selling_price_pence);
+      const hasDiamonds = /diamond|brilliant|pav|\dct/i.test(p2.gemstone || '');
+      const dch = o.diamond_choice == null ? hasDiamonds : o.diamond_choice !== false;
+      const nat = o.diamonds ? o.diamonds.natural : null, lab = o.diamonds ? o.diamonds.lab : null;
+      const dis = w.locked ? 'disabled' : '';
       S.render(el, html`<div class="split"><section class="card"><h2>Selling price</h2><form class="form" id="prf" novalidate style="margin-top:12px">
-        <div class="row"><label class="fld"><span>Price to the customer${!vat || vat.registered !== false ? ' (incl. VAT)' : ''}</span><div class="money"><input name="price" inputmode="decimal" value="${S.pounds(p2.selling_price_pence)}" ${w.locked ? 'disabled' : ''}></div></label>
-          <label class="fld"><span>VAT rate</span><select name="vat_rate" ${w.locked ? 'disabled' : ''}>${S.opts([['20', '20% (standard)'], ['5', '5%'], ['0', '0% / exempt']], String(Math.round(p2.vat_rate)))}</select></label></div></form>
+        <div class="row"><label class="fld"><span>Price in ${main} <em class="req">*</em>${!vat || vat.registered !== false ? ' (incl. VAT)' : ''}</span><div class="money"><input name="price" inputmode="decimal" value="${S.pounds(mainPrice)}" ${dis}></div><small>The main price shown on the website.</small></label>
+          <label class="fld"><span>VAT rate</span><select name="vat_rate" ${dis}>${S.opts([['20', '20% (standard)'], ['5', '5%'], ['0', '0% / exempt']], String(Math.round(p2.vat_rate)))}</select></label></div>
+
+        <div class="section-t" style="margin-top:18px">Other metals <em class="muted" style="text-transform:none;letter-spacing:0">(optional)</em></div>
+        <p class="small muted" style="margin:0 0 8px">Tick the metals you can make this in. Put a price in to let customers buy it in that metal. Leave the price empty and the website shows it as <b>available on enquiry</b>.</p>
+        <div class="metals">${metalList.filter(m => m !== main).map(m => html`<div class="mrow"><label class="mchk"><input type="checkbox" data-moff="${m}" ${offered(m) ? 'checked' : ''} ${dis}> ${m}</label>
+          <div class="money"><input data-mprice="${m}" inputmode="decimal" placeholder="On enquiry" value="${oldMetals[m] != null ? S.pounds(oldMetals[m]) : ''}" ${dis}></div></div>`)}</div>
+
+        <div class="section-t" style="margin-top:18px">Diamonds</div>
+        <label class="mchk" style="margin-bottom:8px"><input type="checkbox" id="dch" ${dch ? 'checked' : ''} ${dis}> Customers can choose a natural or lab-grown diamond</label>
+        <div id="dbox"><div class="row"><label class="fld"><span>Natural diamond price <em>(optional)</em></span><div class="money"><input id="dnat" inputmode="decimal" placeholder="Already in the price" value="${nat != null ? S.pounds(nat) : ''}" ${dis}></div><small id="dnath">Leave empty if the metal prices already include the natural diamond (as now).</small></label>
+          <label class="fld"><span>Lab-grown diamond price <em>(optional)</em></span><div class="money"><input id="dlab" inputmode="decimal" placeholder="On enquiry" value="${lab != null ? S.pounds(lab) : ''}" ${dis}></div><small id="dlabh">Leave empty and lab-grown shows as available on enquiry.</small></label></div>
+          <p class="small muted" style="margin:0">Diamond prices get <b>${mk}%</b> added on top, then go on top of the metal price. If you put a natural diamond price in, put the metal prices in <b>without</b> the diamond.</p></div>
+        </form>
         <div class="card tint flat" style="margin-top:16px;padding:16px"><div class="row-between"><div><div class="tiny" style="letter-spacing:.16em;text-transform:uppercase;color:var(--gold-d)">Suggestion only</div>
-          <div id="sugp" class="serif" style="font-size:1.6rem"></div><div class="small muted" id="sugw"></div></div><button class="btn sm" id="usesug" ${w.locked ? 'disabled' : ''}>Use this price</button></div>
+          <div id="sugp" class="serif" style="font-size:1.6rem"></div><div class="small muted" id="sugw"></div></div><button class="btn sm" id="usesug" ${dis}>Use this price</button></div>
           ${!costs.length && !w.locked ? html`<div class="flex" style="margin-top:12px;align-items:flex-end"><label class="fld" style="max-width:220px;margin:0"><span>What did it cost us? <em>(private)</em></span><div class="money"><input id="qcost" class="inp" inputmode="decimal" placeholder="0.00"></div></label><button class="btn sm gold" type="button" id="qadd">Suggest price</button></div>` : ''}
           <label class="fld" style="margin-top:12px;max-width:220px"><span>Target margin %</span><input id="tm" class="inp" inputmode="decimal" value="${target}"></label></div>
         <p class="small muted" style="margin:14px 0 0">Nothing changes until you press <b>Confirm price</b>. Suggestions never change a price on their own.</p></section>
-        <section class="card"><h2>Profit</h2><div id="calc"></div></section></div>
-        <div class="wizbar"><a class="btn" href="${w.prev}">${icon('back')} Back</a><button class="btn gold" id="nextb" ${w.locked ? 'disabled' : ''}>${icon('check')} Confirm price</button></div>
+        <div class="stack"><section class="card"><h2>What customers see</h2><p class="small muted" style="margin-top:0">Prices with a Buy now button. “On enquiry” options show on the website with an Enquire button.</p><div id="optprev"></div></section>
+        <section class="card"><h2>Profit</h2><p class="small muted" style="margin-top:0">For the main price.</p><div id="calc"></div></section></div></div>
+        <div class="wizbar"><a class="btn" href="${w.prev}">${icon('back')} Back</a><button class="btn gold" id="nextb" ${dis}>${icon('check')} Confirm price</button></div>
         ${w.locked ? html`<div class="wizbar" style="position:static"><span></span><button class="btn" id="skip">Continue ${icon('right')}</button></div>` : ''}`);
       const f = $('#prf', el);
+      const money0 = v => { const t = String(v || '').trim(); if (!t) return null; const n = S.pence(t); return n == null || isNaN(n) || n < 0 ? NaN : n; };
+      const build = () => {
+        const metals = { [main]: money0(f.price.value) };
+        S.$$('[data-moff]', el).forEach(c => { if (c.checked) metals[c.dataset.moff] = money0(S.$(`[data-mprice="${CSS.escape(c.dataset.moff)}"]`, el).value); });
+        const d = $('#dch', el).checked;
+        return { default_metal: main, metals, diamonds: { natural: money0($('#dnat', el).value), lab: d ? money0($('#dlab', el).value) : null }, markup_pct: mk, diamond_choice: d };
+      };
       const live = () => {
-        const pr = S.pence(f.price.value); const p3 = Object.assign({}, p2, { selling_price_pence: pr == null || isNaN(pr) ? null : pr, vat_rate: +f.vat_rate.value });
+        const opts = build(); $('#dbox', el).classList.toggle('off', !opts.diamond_choice);
+        const clean = JSON.parse(JSON.stringify(opts, (k, v) => (typeof v === 'number' && isNaN(v)) ? null : v));
+        const vs = S.variantsFor({ options: clean, metal: main });
+        const mainV = vs.find(v => v.is_default && v.diamond === 'natural');
+        const pr = mainV ? mainV.price_pence : null;
+        const nd = clean.diamonds.natural, ld = clean.diamonds.lab;
+        $('#dnath', el).textContent = nd != null ? `Customer pays ${S.money(addDiamond(nd, mk))} for the diamond (${S.money(nd)} + ${mk}%).` : 'Leave empty if the metal prices already include the natural diamond (as now).';
+        $('#dlabh', el).textContent = ld != null ? `Customer pays ${S.money(addDiamond(ld, mk))} for the diamond (${S.money(ld)} + ${mk}%).` : 'Leave empty and lab-grown shows as available on enquiry.';
+        S.render($('#optprev', el), S.optionsTable({ options: clean, metal: main }));
+        const p3 = Object.assign({}, p2, { selling_price_pence: pr, vat_rate: +f.vat_rate.value });
         const k = S.costing(p3, costs, vat); S.render($('#calc', el), S.costingBlock(k, costs, p3));
         const m = Math.min(95, Math.max(0, parseFloat($('#tm', el).value) || 0)) / 100;
         if (k.landed > 0) { const net = k.landed / (1 - m); const gross = k.reg ? net * (1 + p3.vat_rate / 100) : net; const rounded = Math.ceil(gross / 500) * 500;
           $('#sugp', el).textContent = S.money(rounded); $('#sugw', el).textContent = `${S.money(k.landed)} landed cost at ${Math.round(m * 100)}% margin${k.reg ? ' + VAT' : ''}, rounded up to the nearest £5`; $('#usesug', el).dataset.v = rounded; $('#usesug', el).disabled = w.locked; }
         else { $('#sugp', el).textContent = '—'; $('#sugw', el).textContent = 'Add costs first to get a suggestion.'; $('#usesug', el).disabled = true; }
       };
-      f.price.oninput = live; f.vat_rate.onchange = live; $('#tm', el).oninput = live; live();
+      el.addEventListener('input', live); el.addEventListener('change', live); live();
       $('#usesug', el).onclick = () => { f.price.value = S.pounds(+$('#usesug', el).dataset.v); live(); S.toast('Suggested price filled in. Press Confirm price to keep it.'); };
       const qa = $('#qadd', el); if (qa) qa.onclick = e => { const a = S.pence($('#qcost', el).value);
         if (a == null || isNaN(a) || a <= 0) return S.toast('Put in what it cost, e.g. 300', { bad: true });
@@ -587,9 +649,12 @@
           await WIZ.price(el, prod, w); const b = $('#usesug', el); if (b && !b.disabled) b.click(); }, 'Cost saved').catch(() => {}); };
       const sk = $('#skip', el); if (sk) sk.onclick = w.next;
       $('#nextb', el).onclick = e => {
-        const pr = S.pence(f.price.value); S.clearErr(f);
-        if (pr == null || isNaN(pr) || pr <= 0) return S.fieldErr(f, 'price', 'Enter the selling price, e.g. 2450');
-        S.act(e.currentTarget, async () => { S.must(await S.db.from('products').update({ selling_price_pence: pr, vat_rate: +f.vat_rate.value }).eq('id', prod.id)); w.next(); }, 'Price confirmed').catch(() => {});
+        S.clearErr(f); const opts = build();
+        if (!opts.metals[main] || isNaN(opts.metals[main]) || opts.metals[main] <= 0) return S.fieldErr(f, 'price', 'Enter the price in ' + main + ', e.g. 2450');
+        const badM = Object.keys(opts.metals).find(m => Number.isNaN(opts.metals[m]));
+        if (badM) { S.toast('Check the price for ' + badM + ' (numbers only, e.g. 2450)', { bad: true }); return S.$(`[data-mprice="${CSS.escape(badM)}"]`, el).focus(); }
+        if (Number.isNaN(opts.diamonds.natural) || Number.isNaN(opts.diamonds.lab)) return S.toast('Check the diamond prices (numbers only, e.g. 1200)', { bad: true });
+        S.act(e.currentTarget, async () => { S.must(await S.db.from('products').update({ options: opts, metal: p2.metal || main, vat_rate: +f.vat_rate.value }).eq('id', prod.id)); w.next(); }, 'Prices confirmed').catch(() => {});
       };
     },
     // ---------- 6. review & submit
@@ -652,6 +717,7 @@
           .filter(x => !/Edited: $/.test(x.t)).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 30).map(x => html`<li>${x.t}<time>${dateTime(x.at)}${x.by ? ' · ' + S.staffName(x.by) : ''}</time></li>`)}</ul>` : html`<p class="muted">No history yet.</p>`}</section>
       </div><div class="stack">
         <section class="card"><div class="ch"><h2>Price & profit</h2><a class="btn sm" href="#/products/${prod.id}/edit?step=price">Pricing</a></div>${S.costingBlock(k, costs, prod)}
+          ${prod.options && prod.options.metals ? html`<div class="hr"></div><div class="tiny muted" style="letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px">Metal &amp; diamond options</div>${S.optionsTable(prod)}` : ''}
           <div class="flex" style="margin-top:12px"><a class="btn sm" href="#/products/${prod.id}/edit?step=costs">Edit costs</a></div></section>
         <section class="card"><div class="ch"><h2>Supplier</h2><a class="btn sm" href="#/products/${prod.id}/edit?step=supplier">Edit</a></div>
           ${prod.suppliers ? S.kv([['Supplier', html`<a href="#/suppliers/${prod.suppliers.id}">${prod.suppliers.name}</a>`], ['Their reference', prod.supplier_ref]]) : html`<p class="muted">No supplier set.</p>`}
@@ -704,7 +770,7 @@
           <div class="hr"></div><div class="tiny muted" style="letter-spacing:.14em;text-transform:uppercase">Website description</div><p class="pre">${p2.description || '—'}</p>
           ${p2.notes ? html`<div class="tiny muted" style="letter-spacing:.14em;text-transform:uppercase">Internal notes</div><p class="pre">${p2.notes}</p>` : ''}</section>
       </div><div class="stack">
-        <section class="card"><h2>Price & profit</h2>${S.costingBlock(k, costs, p2)}</section>
+        <section class="card"><h2>Price & profit</h2>${S.costingBlock(k, costs, p2)}${p2.options && p2.options.metals ? html`<div class="hr"></div><div class="tiny muted" style="letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px">Metal &amp; diamond options</div>${S.optionsTable(p2)}` : ''}</section>
         <section class="card"><h2>Supplier & invoice</h2>${p2.suppliers ? S.kv([['Supplier', html`<a href="#/suppliers/${p2.suppliers.id}">${p2.suppliers.name}</a>`], ['Their reference', p2.supplier_ref]]) : html`<p class="muted">No supplier.</p>`}
           ${docs.length ? html`<div class="files" style="margin-top:12px">${docs.map(S.fileTile)}</div>` : html`<p class="muted small">No supplier invoice or receipt attached.</p>`}</section>
         ${notes.length ? html`<section class="card"><h2>Review history</h2><ul class="tl">${notes.map(n => html`<li>${S.label(n.action)}${n.note ? ': ' + n.note : ''}<time>${dateTime(n.created_at)} · ${S.staffName(n.author)}</time></li>`)}</ul></section>` : ''}

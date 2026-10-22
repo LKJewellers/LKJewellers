@@ -437,3 +437,15 @@ button.li{width:100%;border-left:0;border-right:0;border-bottom:0;background:non
 .idlepop .clk{font:600 2.2rem var(--sans);font-variant-numeric:tabular-nums;margin:8px 0 14px;color:var(--rose-d,#a8423a)}
 .teamact .li .amt{font-variant-numeric:tabular-nums}
 .fld em.req{color:var(--rose-d,#a8423a)!important;font-style:normal}
+/* v2.4: metal & diamond options */
+.metals{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 14px}
+.mrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff}
+.mrow .money{flex:0 0 130px}.mrow .money input{width:100%}
+.mchk{display:flex;align-items:center;gap:8px;flex:1;font-size:.92rem;cursor:pointer;text-transform:none;letter-spacing:0}
+.mchk input{width:20px;height:20px;accent-color:var(--gold-d);flex:none;margin:0}
+#dbox.off{opacity:.45;pointer-events:none}
+.opttab{width:100%;border-collapse:collapse;font-size:.9rem}
+.opttab th{text-align:left;font:500 .66rem var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+.opttab td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.opttab tr.main td{background:var(--gold-ll,#f5eedf)}
+.opttab .tag{font-size:.6rem;padding:2px 6px;border-radius:99px;background:var(--gold-d);color:#fff;letter-spacing:.08em;text-transform:uppercase;margin-left:4px}
