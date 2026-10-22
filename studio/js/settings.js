@@ -47,9 +47,9 @@
       $('#inv', el).onclick = () => {
         const s = S.sheet({ title: 'Invite team member', body: html`<form class="form" id="if"><label class="fld"><span>Full name</span><input name="full_name" maxlength="120"></label><label class="fld"><span>Work email</span><input name="email" type="email"></label>
           <label class="fld"><span>Role</span><select name="role">${S.opts([['staff', 'Team member'], ['owner', 'Admin (full control)']])}</select></label><label class="check"><input type="checkbox" name="can_view_finance"><span>Can see financial information</span></label></form>
-          <p class="small muted">They will receive an email to set their own password.</p>`, foot: html`<button class="btn ghost" data-close>Cancel</button><button class="btn gold" id="ok">Send invitation</button>` });
+          <p class="small muted">You will get a link to send them, so they can set their own password.</p>`, foot: html`<button class="btn ghost" data-close>Cancel</button><button class="btn gold" id="ok">Get invite link</button>` });
         $('#ok', s.el).onclick = e => { const f = $('#if', s.el), o = S.form(f); S.clearErr(f); if (!o.full_name) return S.fieldErr(f, 'full_name', 'Enter their name'); if (!S.validEmail(o.email)) return S.fieldErr(f, 'email', 'Enter a valid email');
-          S.act(e.currentTarget, async () => { await S.worker('/staff/invite', o); s.close(); SECTIONS.team(el); }, 'Invitation sent').catch(() => {}); };
+          S.act(e.currentTarget, async () => { const r = await S.worker('/staff/invite', o); s.close(); SECTIONS.team(el); if (r && r.link) S.shareLink({ title: 'Invitation link ready', link: r.link, email: r.email, name: o.full_name, what: 'Here is your link to join LK Studio and choose a password:' }); }).catch(() => {}); };
       };
       S.on(el, '[data-m]', 'click', (e, b) => {
         const m = staff.find(x => x.user_id === b.dataset.m);

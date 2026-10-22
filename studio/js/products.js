@@ -242,7 +242,7 @@
     }
     // ---- admin: make every existing product photo's background white
     const wa = $('#whall', v); if (wa) wa.onclick = async () => {
-      const todo = S.must(await S.db.from('product_images').select('id,path,product_id,media_type,bg_white,products!inner(id,status,deleted_at)').eq('bg_white', false).is('products.deleted_at', null)).filter(x => x.media_type !== 'video');
+      const todo = S.must(await S.db.from('product_images').select('id,path,original_path,product_id,media_type,bg_white,products!inner(id,status,deleted_at)').eq('bg_white', false).is('products.deleted_at', null)).filter(x => x.media_type !== 'video');
       if (!todo.length) return S.toast('All product photos already have white backgrounds.');
       if (!(await S.confirm({ title: `Whiten ${todo.length} photo${todo.length === 1 ? '' : 's'}?`, message: 'Each photo’s background is made pure white and saved in place of the old one. Keep this page open until it finishes; it can take a few seconds per photo. Photos that already have a white background are left as they are.', confirm: 'Start' }))) return;
       const sh = S.sheet({ title: 'Whitening photos', body: html`<p id="wprog" class="muted" style="margin-top:0">Starting…</p><div class="pbar"><i id="wbar"></i></div><p class="small muted">Please keep this page open.</p>` });
@@ -250,13 +250,14 @@
       for (const im of todo) {
         $('#wprog', sh.el).textContent = `Photo ${done + 1} of ${todo.length}…`;
         try {
-          const res = await fetch(S.publicImg(im.path) + '?v=' + Date.now()); if (!res.ok) throw new Error('download');
+          const src = im.original_path || im.path;
+          const res = await fetch(S.publicImg(src) + '?v=' + Date.now()); if (!res.ok) throw new Error('download');
           const r = await S.whiteBgAI(await res.blob());
           if (r.changed) {
             const path = `${im.product_id}/${S.uuid()}.jpg`;
             await S.upload('product-images', path, r.blob, 'image/jpeg');
-            S.must(await S.db.from('product_images').update({ path, bg_white: true }).eq('id', im.id));
-            await S.db.storage.from('product-images').remove([im.path]);
+            S.must(await S.db.from('product_images').update({ path, original_path: src, bg_white: true }).eq('id', im.id));
+            if (im.path !== src) await S.db.storage.from('product-images').remove([im.path]);   // the original is kept
             changed++; if (im.products && im.products.status === 'published') touched.add(im.product_id);
           } else S.must(await S.db.from('product_images').update({ bg_white: true }).eq('id', im.id));
         } catch (er) { failed++; console.warn(er); }
@@ -339,7 +340,7 @@
             <div class="tools">${vid ? raw('<span></span>') : html`<button type="button" data-prim="${im.id}" title="Make main photo" aria-label="Make main photo" ${im.is_primary ? 'disabled' : ''}>${icon('star')}</button>`}
             <span class="flex" style="gap:6px"><button type="button" data-mv="${im.id}|-1" aria-label="Move earlier" ${k === 0 ? 'disabled' : ''}>${icon('left')}</button><button type="button" data-mv="${im.id}|1" aria-label="Move later" ${k === imgs.length - 1 ? 'disabled' : ''}>${icon('right')}</button></span>
             <button type="button" data-del="${im.id}" aria-label="Remove">${icon('trash')}</button></div>
-            ${vid ? '' : html`<button type="button" class="wbbtn" data-white="${im.id}" title="Make this photo's background white">White background</button>`}</div>`; })}
+            ${vid ? '' : html`<div class="wbrow"><button type="button" class="wbbtn" data-white="${im.id}" title="Make this photo's background white">${im.original_path ? 'Redo white' : 'White background'}</button>${im.original_path ? html`<button type="button" class="wbbtn" data-orig="${im.id}" title="Put the photo back as it was">Original</button>` : ''}</div>`}</div>`; })}
             <label class="ph-add">${icon('camera')}Take photo<input type="file" accept="image/*" capture="environment" data-up></label>
             <label class="ph-add">${icon('upload')}Upload photos or videos<input type="file" accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.mp4,.m4v" multiple data-up></label></div>
           <div id="dropz" class="dropz">${icon('upload')} <b>Drag photos or videos here</b> <span class="muted">from a folder or the desktop</span></div>
@@ -363,11 +364,17 @@
               } else {
                 let prep = null;
                 let wb = false;
-                if (autoWhite) { const r = await S.whiteBgAI(f, whiteBg).catch(() => null); if (r) { prep = { blob: r.blob, type: 'image/jpeg', ext: 'jpg' }; wb = true; if (r.changed) whitened++; } }
+                let original_path = null;
+                if (autoWhite) { const r = await S.whiteBgAI(f, whiteBg).catch(() => null); if (r) { prep = { blob: r.blob, type: 'image/jpeg', ext: 'jpg' }; wb = true; if (r.changed) {
+                  whitened++;
+                  // keep the photo as it was too, so the white background can be redone or undone later
+                  const o = await S.prepareImage(f); original_path = `${prod.id}/orig-${S.uuid()}.${o.ext}`;
+                  try { await S.upload('product-images', original_path, o.blob, o.type); } catch (er) { original_path = null; }
+                } } }
                 if (!prep) prep = await S.prepareImage(f);
                 const path = `${prod.id}/${S.uuid()}.${prep.ext}`;
                 await S.upload('product-images', path, prep.blob, prep.type);
-                S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, position: pos++, bg_white: wb }));
+                S.must(await S.db.from('product_images').insert({ product_id: prod.id, path, original_path, position: pos++, bg_white: wb }));
               }
             } catch (e) { failed.push(f.name + ': ' + S.friendly(e.message)); }
             tile.textContent = 'Done';
@@ -392,20 +399,38 @@
         S.on(el, '[data-del]', 'click', async (e, b) => {
           if (!(await S.confirm({ title: 'Remove this?', confirm: 'Remove', danger: true }))) return;
           const im = imgs.find(x => x.id === b.dataset.del);
-          S.act(b, async () => { S.must(await S.db.from('product_images').delete().eq('id', im.id)); await S.db.storage.from('product-images').remove([im.path]); draw(); }, 'Removed').catch(() => {});
+          S.act(b, async () => { S.must(await S.db.from('product_images').delete().eq('id', im.id)); await S.db.storage.from('product-images').remove([im.path, im.original_path].filter(Boolean)); draw(); }, 'Removed').catch(() => {});
         });
-        S.on(el, '[data-white]', 'click', (e, b) => {
+        S.on(el, '[data-white]', 'click', async (e, b) => {
           const im = imgs.find(x => x.id === b.dataset.white); if (!im) return;
+          let lvl = 0;
+          if (im.original_path) {   // trying again: choose how much to keep
+            lvl = await new Promise(res => {
+              const sh = S.sheet({ title: 'Try the white background again', onClose: () => res(null), body: html`<p class="muted" style="margin-top:0">Starts again from the original photo. If bits of the piece (chains, claws, stones) were cut off, choose <b>Keep more detail</b>.</p>
+                <div class="stack" style="display:grid;gap:8px"><button class="btn" data-l="0">Standard</button><button class="btn gold" data-l="1">Keep more detail</button><button class="btn" data-l="2">Keep even more detail</button></div>` });
+              S.on(sh.el, '[data-l]', 'click', (ev, x) => { res(+x.dataset.l); sh.close(); });
+            });
+            if (lvl == null) return;
+          }
           S.act(b, async () => {
-            const res = await fetch(S.publicImg(im.path) + '?v=' + Date.now()); if (!res.ok) throw new Error('Could not open the photo');
-            const r = await S.whiteBgAI(await res.blob(), whiteBg);
+            const src = im.original_path || im.path;
+            const res = await fetch(S.publicImg(src) + '?v=' + Date.now()); if (!res.ok) throw new Error('Could not open the photo');
+            const r = await S.whiteBgAI(await res.blob(), whiteBg, lvl);
             if (!r.changed) { S.must(await S.db.from('product_images').update({ bg_white: true }).eq('id', im.id)); S.toast('This background is already white.'); return; }
             const path = `${prod.id}/${S.uuid()}.jpg`;
             await S.upload('product-images', path, r.blob, 'image/jpeg');
-            S.must(await S.db.from('product_images').update({ path, bg_white: true }).eq('id', im.id));
-            await S.db.storage.from('product-images').remove([im.path]);
+            S.must(await S.db.from('product_images').update({ path, original_path: src, bg_white: true }).eq('id', im.id));
+            if (im.path !== src) await S.db.storage.from('product-images').remove([im.path]);   // the original is kept
             draw();
           }, 'Background made white').catch(() => {});
+        });
+        S.on(el, '[data-orig]', 'click', (e, b) => {
+          const im = imgs.find(x => x.id === b.dataset.orig); if (!im || !im.original_path) return;
+          S.act(b, async () => {
+            S.must(await S.db.from('product_images').update({ path: im.original_path, original_path: null, bg_white: true }).eq('id', im.id));
+            await S.db.storage.from('product-images').remove([im.path]);
+            draw();
+          }, 'Original photo put back').catch(() => {});
         });
         $('#nextb', el).onclick = w.next;
       };

@@ -39,9 +39,16 @@
         const label = p.name + (vs.length && (metals.length > 1 || hasLab) ? ' – ' + st.metal + (hasLab ? ', ' + diaName(st.dia).toLowerCase() : '') : '') + (p.sku ? ' (' + p.sku + ')' : '');
         const enq = `contact?enquire=${encodeURIComponent(label)}`;
         const priceTxt = pp ? money(pp) : 'Available on enquiry';
-        const canBuy = pp && url && p.available;
+        const canBuy = !!(pp && url);
+        st.label = label;
         return { price: `<p class="price${pp ? '' : ' por'}" id="vprice">${priceTxt}</p>`,
-          actions: `${p.available ? '' : '<p class="muted">Currently sold out. Ask us about making one for you.</p>'}${canBuy ? `<a class="btn solid" href="${esc(url)}" rel="noopener">Buy now</a> ` : ''}<a class="btn${canBuy ? '' : ' solid'}" href="${enq}">${pp ? 'Enquire about this piece' : 'Enquire about this option'}</a>` };
+          actions: `${canBuy ? `<a class="btn solid" href="${esc(url)}" rel="noopener">Buy now</a> ` : ''}<button type="button" class="btn${canBuy ? '' : ' solid'}" data-enq>${canBuy ? 'Ask a question' : 'Enquire about this option'}</button>
+          <form class="enqf" hidden><p class="muted small">${canBuy ? 'Ask us anything about this piece.' : 'This option is made to order. Leave your details and we will reply with a price within one working day.'}</p>
+            <input name="name" placeholder="Your name" autocomplete="name" required><input name="email" type="email" placeholder="Email" autocomplete="email" required>
+            <input name="phone" type="tel" placeholder="Phone (optional)" autocomplete="tel"><textarea name="message" rows="3" placeholder="Ring size, questions or notes (optional)"></textarea>
+            <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
+            <button class="btn solid" type="submit">Send enquiry</button><p class="enqn small" aria-live="polite"></p></form>
+          ${LK.workerReady ? '' : `<a class="small" href="${enq}">Or use our contact page</a>`}` };
       };
       const details = () => [['Metal', vs.length ? st.metal : p.metal], ['Stone', p.gemstone], ['Material', p.material]].filter(x => x[1]);
       const right = () => { const b = buyHtml(); return `<span class="label">${esc(p.category || '')}</span><h1>${esc(p.name)}</h1>${b.price}
@@ -53,7 +60,23 @@
         ${(p.videos || []).map(v => `<video class="item-video" src="${esc(LK.productImage(v))}" autoplay muted playsinline loop preload="auto" disablepictureinpicture disableremoteplayback></video>`).join('')}</div>
         <div id="iright">${right()}</div></div>`;
       const box = $('#iright');
+      box.addEventListener('submit', async e => {
+        const f = e.target.closest('.enqf'); if (!f) return; e.preventDefault();
+        const n = f.querySelector('.enqn'), btn = f.querySelector('button[type=submit]'), fd = new FormData(f);
+        if (!LK.workerReady) { location.href = 'contact?enquire=' + encodeURIComponent(st.label); return; }
+        const body = Object.fromEntries(fd.entries());
+        body.subject = 'Product enquiry: ' + st.label; body.page = location.pathname + location.search;
+        body.message = 'Piece: ' + st.label + '\n' + location.href + (body.message ? '\n\n' + body.message : '');
+        btn.disabled = true; n.textContent = 'Sending…';
+        try {
+          const r = await fetch(LK_CONFIG.WORKER_URL.replace(/\/$/, '') + '/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'failed');
+          f.reset(); n.textContent = 'Thank you. We have your enquiry' + (j.ref ? ' (reference ' + j.ref + ')' : '') + ' and will reply within one working day.';
+        } catch (er) { n.textContent = er.message && er.message !== 'failed' && !/fetch/i.test(er.message) ? er.message : 'Sorry, that did not send. Please email sales@lkjewellers.co.uk.'; }
+        finally { btn.disabled = false; }
+      });
       box.addEventListener('click', e => {
+        const q = e.target.closest('[data-enq]'); if (q) { const f = box.querySelector('.enqf'); f.hidden = !f.hidden; if (!f.hidden) f.querySelector('input').focus(); return; }
         const b = e.target.closest('[data-metal],[data-dia]'); if (!b) return;
         if (b.dataset.metal) st.metal = b.dataset.metal; else st.dia = b.dataset.dia;
         box.innerHTML = right();

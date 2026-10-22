@@ -128,11 +128,11 @@
 
   // Calls to the Cloudflare Worker (things that need secret keys)
   S.worker = async (path, body) => {
-    if (!S.workerUrl) { const e = new Error('MANUAL CONFIGURATION REQUIRED: the Cloudflare Worker is not connected yet (WORKER_URL in js/config.js).'); e.config = true; throw e; }
+    if (!S.workerUrl) { const e = new Error('The secure server is not connected yet (WORKER_URL in js/config.js).'); e.config = true; throw e; }
     const { data: { session } } = await S.db.auth.getSession();
     let r;
     try { r = await fetch(S.workerUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (session ? session.access_token : '') }, body: JSON.stringify(body || {}) }); }
-    catch (x) { const e = new Error('Could not reach the Cloudflare Worker. Check your connection or the Worker address.'); e.network = true; throw e; }
+    catch (x) { const e = new Error('Could not reach the secure server. Check your connection and try again.'); e.network = true; throw e; }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { const e = new Error(j.error || 'Request failed'); e.config = !!j.config || r.status === 503; e.status = r.status; throw e; }
     return j;
@@ -223,6 +223,17 @@
   S.act = async (btn, fn, okMsg) => {
     try { const r = await S.busy(btn, fn); if (okMsg) S.toast(okMsg); return r; }
     catch (e) { if (!e.config) console.error(e); if (e.config) S.configDialog(e.message); else S.toast(S.friendly(e.message), { bad: true, retry: () => S.act(btn, fn, okMsg) }); throw e; }
+  };
+  // Show a secure link for the admin to send by hand (email sending isn't connected)
+  S.shareLink = ({ title, link, email, phone, name, what }) => {
+    const greet = 'Hi' + (name ? ' ' + name : '') + ',\n\n';
+    const text = greet + what + '\n\n' + link + '\n\nThis link works once and expires in 1 hour.\n\nLK Jewellers';
+    const wa = (phone || '').replace(/[^\d+]/g, '').replace(/^0/, '44').replace(/^\+/, '');
+    const s = S.sheet({ title, body: S.html`<p class="muted" style="margin-top:0">Send this link to <b>${email}</b>. It works once and expires in 1 hour.</p>
+      <textarea readonly rows="4" style="width:100%;font-size:.8rem" id="shl">${link}</textarea>`,
+      foot: S.html`<button class="btn" data-copy>Copy link</button><a class="btn" href="${'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent('Your LK Jewellers account') + '&body=' + encodeURIComponent(text)}">Email</a>${wa ? S.html`<a class="btn" target="_blank" rel="noopener" href="${'https://wa.me/' + wa + '?text=' + encodeURIComponent(text)}">WhatsApp</a>` : ''}<button class="btn gold" data-close>Done</button>` });
+    S.on(s.el, '[data-copy]', 'click', async () => { try { await navigator.clipboard.writeText(link); } catch (e) { const t = S.$('#shl', s.el); t.select(); document.execCommand('copy'); } S.toast('Link copied'); });
+    return s;
   };
   S.configDialog = (msg) => S.sheet({ title: 'Manual configuration required', body: S.html`${S.configBanner(msg.replace(/^MANUAL CONFIGURATION REQUIRED:\s*/i, ''))}
     <p class="muted">Nothing was changed. Open <b>Settings → Integrations</b> to see exactly what to connect, then try again.</p>`,

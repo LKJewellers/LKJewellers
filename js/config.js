@@ -10,5 +10,5 @@ window.LK_CONFIG = {
   SUPABASE_URL: 'https://dhztyjyzpqaqajlvgiuc.supabase.co',             // e.g. https://abcdxyz.supabase.co
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoenR5anl6cHFhcWFqbHZnaXVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjUxNjcsImV4cCI6MjEwNzI0MTE2N30.LJAXE_XOorxHkSHsKc2qyrfxemOHuinNK8BSi6emP4E',   // "anon / public" key
   SITE_URL: 'https://lkjewellers.co.uk',
-  WORKER_URL: 'YOUR_WORKER_URL'                 // Cloudflare Worker (admin actions, receipts, emails). Leave as is until you deploy it
+  WORKER_URL: 'https://dhztyjyzpqaqajlvgiuc.supabase.co/functions/v1/worker'   // secure server (Supabase Edge Function "worker")
 };

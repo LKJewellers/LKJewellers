@@ -413,8 +413,8 @@ button.li{width:100%;border-left:0;border-right:0;border-bottom:0;background:non
 /* Videos + automatic white background */
 .ph-item video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
 .ph-item .lbl.vid{background:var(--ink)}
-.ph-item .wbbtn{position:absolute;right:6px;top:6px;border:0;border-radius:999px;background:rgba(255,255,255,.94);font:500 .62rem var(--sans);letter-spacing:.06em;padding:5px 9px;cursor:pointer;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.15)}
-.ph-item.primary .wbbtn{top:6px}
+.ph-item .wbrow{position:absolute;right:6px;top:6px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.ph-item .wbbtn{border:0;border-radius:999px;background:rgba(255,255,255,.94);font:500 .62rem var(--sans);letter-spacing:.06em;padding:5px 9px;cursor:pointer;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .wbtoggle{display:flex;gap:10px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:6px 0 14px;cursor:pointer}
 .wbtoggle input{width:20px;height:20px;margin-top:2px;accent-color:var(--gold-d);flex:none}
 .vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px}

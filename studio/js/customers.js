@@ -143,12 +143,17 @@
       $('#edit', t).onclick = () => editCustomer(c);
       S.on(t, '[data-acc]', 'click', async (e, b) => {
         const a = b.dataset.acc;
-        const labels = { 'signup-link': ['Send a secure signup link?', `We will email ${c.email} a link to confirm their email and create a password. It expires in 24 hours.`, 'Send link'],
-          'password-reset': ['Send a password reset link?', `We will email ${c.email} a secure link to choose a new password. You will never see their password.`, 'Send link'],
+        const labels = { 'signup-link': ['Send a secure signup link?', `You'll get a secure link to send to ${c.email} so they can create a password. It expires in 1 hour.`, 'Get link'],
+          'password-reset': ['Send a password reset link?', `You'll get a secure link to send to ${c.email} so they can choose a new password. You never see their password.`, 'Get link'],
           disable: ['Disable this account?', 'They will be signed out and unable to sign in until you reactivate the account. Their records are kept.', 'Disable'],
           reactivate: ['Reactivate this account?', 'They will be able to sign in again.', 'Reactivate'] }[a];
         if (!(await S.confirm({ title: labels[0], message: labels[1], confirm: labels[2], danger: a === 'disable' }))) return;
-        try { await S.act(b, () => S.worker('/customers/' + a, { customer_id: c.id }), { 'signup-link': 'Signup link sent', 'password-reset': 'Password reset link sent', disable: 'Account disabled', reactivate: 'Account reactivated' }[a]); S.dispatch(); } catch (er) { /* shown */ }
+        try {
+          const r = await S.act(b, () => S.worker('/customers/' + a, { customer_id: c.id }), { disable: 'Account disabled', reactivate: 'Account reactivated' }[a]);
+          S.dispatch();
+          if (r && r.link) S.shareLink({ title: a === 'signup-link' ? 'Signup link ready' : 'Password reset link ready', link: r.link, email: r.email, phone: r.phone, name: r.name,
+            what: a === 'signup-link' ? 'Here is your link to set up your LK Jewellers account and choose a password:' : 'Here is your link to choose a new password for your LK Jewellers account:' });
+        } catch (er) { /* shown */ }
       });
       const ar = $('#archive', t); if (ar) ar.onclick = async () => {
         if (!(await S.confirm({ title: 'Delete ' + S.name(c) + '?', message: 'The customer will be removed from your lists and search' + (c.auth_user_id ? ', and their website account will be blocked' : '') + '. Their orders, invoices and payments stay in your records.', confirm: 'Delete', danger: true, typed: 'DELETE' }))) return;

@@ -46,7 +46,49 @@
     return out;
   }
 
-  async function aiWhite(file) {
+  // binary min/max filter with a square window (separable, sliding count)
+  function morph(a, w, h, r, erode) {
+    const t = new Uint8Array(a.length), o = new Uint8Array(a.length), need = erode ? 2 * r + 1 : 1;
+    for (let y = 0; y < h; y++) { const b = y * w; let c = 0;
+      for (let x = -r; x <= r; x++) c += a[b + Math.min(w - 1, Math.max(0, x))];
+      for (let x = 0; x < w; x++) { t[b + x] = c >= need ? 1 : 0; c += a[b + Math.min(w - 1, x + r + 1)] - a[b + Math.max(0, x - r)]; } }
+    for (let x = 0; x < w; x++) { let c = 0;
+      for (let y = -r; y <= r; y++) c += t[Math.min(h - 1, Math.max(0, y)) * w + x];
+      for (let y = 0; y < h; y++) { o[y * w + x] = c >= need ? 1 : 0; c += t[Math.min(h - 1, y + r + 1) * w + x] - t[Math.max(0, y - r) * w + x]; } }
+    return o;
+  }
+  // map (0..1) of thin details (chains, jump rings, fine wire) that are joined to the piece
+  function followThin(full, W, H, a0, cr, cg, cb, w, h, lvl) {
+    const k = Math.min(1, 1400 / Math.max(W, H)), gw = Math.max(2, Math.round(W * k)), gh = Math.max(2, Math.round(H * k)), n = gw * gh;
+    const c = canvas(gw, gh), g = ctx(c); g.imageSmoothingQuality = 'high'; g.drawImage(full, 0, 0, gw, gh);
+    const px = g.getImageData(0, 0, gw, gh).data;
+    const [A, R, G, B] = scaleMaps([a0, cr, cg, cb], w, h, gw, gh);
+    const cand = new Uint8Array(n), seed = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      const df = Math.max(Math.abs(px[i * 4] - R[i] * 255), Math.abs(px[i * 4 + 1] - G[i] * 255), Math.abs(px[i * 4 + 2] - B[i] * 255));
+      cand[i] = df > [16, 11, 8][lvl] ? 1 : 0; seed[i] = A[i] > 0.5 ? 1 : 0;
+    }
+    // big shapes (shadows, reflections, the piece itself) survive an "opening"; thin things don't
+    const r = Math.max(3, Math.round(Math.max(gw, gh) * 0.007));
+    const blob = morph(morph(cand, gw, gh, r, true), gw, gh, r, false);
+    const ok = new Uint8Array(n); for (let i = 0; i < n; i++) ok[i] = cand[i] && !blob[i] ? 1 : 0;
+    // grow out from the piece through thin details, stepping over tiny gaps between links
+    const reach = new Uint8Array(n), q = new Int32Array(n); let qh = 0, qt = 0;
+    for (let i = 0; i < n; i++) if (seed[i]) { reach[i] = 1; q[qt++] = i; }
+    const J = 2;
+    while (qh < qt) {
+      const i = q[qh++], x = i % gw, y = (i / gw) | 0;
+      for (let dy = -J; dy <= J; dy++) { const yy = y + dy; if (yy < 0 || yy >= gh) continue;
+        for (let dx = -J; dx <= J; dx++) { const xx = x + dx; if (xx < 0 || xx >= gw) continue;
+          const j = yy * gw + xx; if (!reach[j] && ok[j]) { reach[j] = 1; q[qt++] = j; } } }
+    }
+    const out = new Uint8Array(n); for (let i = 0; i < n; i++) out[i] = reach[i] && !seed[i] ? 1 : 0;
+    const grown = morph(out, gw, gh, 1, false); const f = new Float32Array(n); for (let i = 0; i < n; i++) f[i] = grown[i];
+    return { map: f, w: gw, h: gh };
+  }
+
+  async function aiWhite(file, lvl) {
+    lvl = Math.max(0, Math.min(2, lvl | 0));   // 0 standard, 1 keep more detail, 2 keep even more
     const sess = await session();
     const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
     const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height)), W = Math.round(bmp.width * k), H = Math.round(bmp.height * k);
@@ -70,7 +112,7 @@
     const o = res[sess.outputNames[0]].data; let lo = Infinity, hi = -Infinity; for (const v of o) { if (v < lo) lo = v; if (v > hi) hi = v; }
     const m320 = new Float32Array(M * M); for (let i = 0; i < M * M; i++) m320[i] = (o[i] - lo) / (hi - lo + 1e-8);
     const [m] = scaleMaps([m320], M, M, w, h);
-    const a0 = new Float32Array(w * h); for (let i = 0; i < w * h; i++) a0[i] = Math.min(1, Math.max(0, (m[i] - 0.1) / 0.4));
+    const a0 = new Float32Array(w * h); for (let i = 0; i < w * h; i++) a0[i] = Math.min(1, Math.max(0, (m[i] - [0.1, 0.06, 0.03][lvl]) / [0.4, 0.3, 0.2][lvl]));
     // 2. estimate the background colour behind the piece (copes with gradients)
     const R = Math.max(2, Math.round(Math.max(w, h) * 0.03));
     const wt = new Float32Array(w * h), cr = new Float32Array(w * h), cg = new Float32Array(w * h), cb = new Float32Array(w * h);
@@ -84,15 +126,19 @@
       blur(hole, w, h, 2); for (let i = 0; i < w * h; i++) if (hole[i] > 0.9) a0[i] = 0;
     }
     // 4. "near the piece" zone, where anything not background-coloured is always kept
-    const rn = Math.max(2, Math.round(Math.max(w, h) * 0.015)), near = new Float32Array(w * h);
+    const rn = Math.max(2, Math.round(Math.max(w, h) * [0.015, 0.03, 0.05][lvl])), near = new Float32Array(w * h);
     for (let i = 0; i < w * h; i++) near[i] = a0[i] > 0.5 ? 1 : 0;
     blur(near, w, h, rn); for (let i = 0; i < w * h; i++) near[i] = Math.min(1, near[i] * 4);
-    // 5. full-size pass: paint the background white
+    // 5. chains: the model often misses thin chains, so follow anything thin and not background-coloured
+    //    that is joined to the piece, however far it runs (chains up to the edge of the photo).
+    //    Big shapes (shadows, reflections) are not followed.
+    const ch = followThin(full, W, H, a0, cr, cg, cb, w, h, lvl); const [CH] = scaleMaps([ch.map], ch.w, ch.h, W, H);
+    // 6. full-size pass: paint the background white
     const [A, N, BR, BG] = scaleMaps([a0, near, cr, cg], w, h, W, H); const [BB] = scaleMaps([cb], w, h, W, H);
     const img = fg.getImageData(0, 0, W, H), d = img.data;
     for (let i = 0, p = 0; i < W * H; i++, p += 4) {
       const diff = Math.max(Math.abs(d[p] - BR[i] * 255), Math.abs(d[p + 1] - BG[i] * 255), Math.abs(d[p + 2] - BB[i] * 255));
-      const keep = Math.min(1, Math.max(0, (diff - 14) / 20)) * N[i];
+      const keep = Math.min(1, Math.max(0, (diff - [14, 9, 6][lvl]) / [20, 16, 12][lvl])) * Math.max(N[i], CH[i]);
       const a = Math.max(A[i], keep);
       if (a < 1) { d[p] += (255 - d[p]) * (1 - a); d[p + 1] += (255 - d[p + 1]) * (1 - a); d[p + 2] += (255 - d[p + 2]) * (1 - a); }
     }
@@ -101,8 +147,8 @@
   }
 
   // Public: returns { blob (JPEG), changed }. Falls back to the simple method if the AI can't run.
-  S.whiteBgAI = async (file, basic) => {
-    try { return await aiWhite(file); }
+  S.whiteBgAI = async (file, basic, lvl) => {
+    try { return await aiWhite(file, lvl); }
     catch (e) { console.warn('AI background removal unavailable, using the simple method', e); if (basic) return basic(file); throw e; }
   };
 })();
